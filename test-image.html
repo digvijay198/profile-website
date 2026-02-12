@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        img {
+            max-width: 300px;
+            border-radius: 50%;
+            border: 5px solid #6366f1;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #22c55e;
+            color: white;
+        }
+        .error {
+            background: #ef4444;
+            color: white;
+        }
+        .info {
+            background: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Profile Image Test</h1>
+        <p class="status info">Testing image paths...</p>
+        
+        <h2>Test 1: ./profile.jpg</h2>
+        <img src="./profile.jpg" alt="Test 1" id="test1" 
+             onload="document.getElementById('status1').className='status success'; document.getElementById('status1').textContent='✅ SUCCESS: Image loaded!'"
+             onerror="document.getElementById('status1').className='status error'; document.getElementById('status1').textContent='❌ FAILED: Image not found'">
+        <p id="status1" class="status info">Loading...</p>
+        
+        <h2>Test 2: profile.jpg</h2>
+        <img src="profile.jpg" alt="Test 2" id="test2"
+             onload="document.getElementById('status2').className='status success'; document.getElementById('status2').textContent='✅ SUCCESS: Image loaded!'"
+             onerror="document.getElementById('status2').className='status error'; document.getElementById('status2').textContent='❌ FAILED: Image not found'">
+        <p id="status2" class="status info">Loading...</p>
+        
+        <h2>Test 3: Absolute Path</h2>
+        <p class="status info" id="pathInfo">Current page path: <span id="currentPath"></span></p>
+        <script>
+            document.getElementById('currentPath').textContent = window.location.href;
+        </script>
+        
+        <hr style="margin: 30px 0; border-color: #475569;">
+        <h3>Instructions:</h3>
+        <ol style="text-align: left; max-width: 500px; margin: 0 auto;">
+            <li>Make sure <code>profile.jpg</code> is in the same folder as this file</li>
+            <li>Check which test shows "SUCCESS"</li>
+            <li>Use that path format in your main index.html</li>
+            <li>If all tests fail, check the filename (case-sensitive!)</li>
+        </ol>
+    </div>
+</body>
+</html>
