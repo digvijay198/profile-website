@@ -105,8 +105,8 @@ const CONFIG = {
       "bye": "Goodbye! Reach out anytime via the contact section.",
       "goodbye": "Bye! Have a great day.",
 
-      // Fallback (keep last so it's not used when a longer key matches)
-      "default": "I'm not sure I caught that. You can ask about my **education**, **experience**, **projects**, **skills**, **contact**, or **location**. Or try: &quot;What can you do?&quot; for ideas!"
+      // Fallback
+      "default": "I didn't quite get that. Try asking about <b>education</b>, <b>experience</b>, <b>projects</b>, <b>skills</b>, <b>contact</b>, or <b>location</b>. You can also say &quot;change theme to blue&quot; or &quot;play music&quot;!"
   }
 };
 
@@ -635,8 +635,13 @@ function initializeChatbot() {
   });
 }
 
-// Voice input (Web Speech API)
+// Voice input (Web Speech API) - optimized
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function normalizeTranscript(text) {
+  if (!text || typeof text !== "string") return "";
+  return text.trim().replace(/\s+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
 
 function toggleVoiceInput() {
   const input = document.getElementById("chatbotInput");
@@ -654,45 +659,57 @@ function toggleVoiceInput() {
     return;
   }
 
+  let finalTranscript = "";
+
   const recognition = new SpeechRecognition();
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = "en-US";
+  recognition.maxAlternatives = 2;
 
   recognition.onstart = () => {
     window._chatbotRecognitionActive = true;
+    finalTranscript = "";
     micBtn.classList.add("listening");
     statusEl.style.display = "block";
-    statusEl.textContent = "Listening...";
+    statusEl.textContent = "Speak now...";
   };
 
   recognition.onend = () => {
     window._chatbotRecognitionActive = false;
     micBtn.classList.remove("listening");
     statusEl.style.display = "none";
+    const text = normalizeTranscript(finalTranscript);
+    if (text.length >= 2) {
+      input.value = text;
+      input.focus();
+      setTimeout(() => sendChatMessage(), 400);
+    }
   };
 
   recognition.onresult = (event) => {
-    let final = "";
     let interim = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        final += transcript;
+        finalTranscript += transcript;
+        statusEl.textContent = "Got it! Sending...";
       } else {
         interim += transcript;
       }
     }
-    const text = (final || interim).trim();
-    if (text) {
-      input.value = input.value ? input.value + " " + text : text;
+    if (interim) {
+      statusEl.textContent = "Hearing: " + interim.substring(0, 40) + (interim.length > 40 ? "…" : "");
     }
   };
 
   recognition.onerror = (event) => {
     if (event.error === "not-allowed") {
       statusEl.textContent = "Microphone access denied.";
-      setTimeout(() => { statusEl.style.display = "none"; }, 2000);
+      setTimeout(() => { statusEl.style.display = "none"; }, 2500);
+    } else if (event.error === "no-speech") {
+      statusEl.textContent = "No speech detected. Try again.";
+      setTimeout(() => { statusEl.style.display = "none"; }, 1500);
     }
   };
 
@@ -712,6 +729,43 @@ function stopVoiceInput() {
 
 window.toggleVoiceInput = toggleVoiceInput;
 
+// Normalize user input for better matching: contractions, punctuation, extra spaces
+function normalizeForMatching(text) {
+  if (!text || typeof text !== "string") return "";
+  let t = text.toLowerCase().trim().replace(/\s+/g, " ");
+  const contractions = [
+    ["what's", "what is"], ["whats", "what is"], ["who's", "who is"], ["whos", "who is"],
+    ["where's", "where is"], ["wheres", "where is"], ["how's", "how is"], ["hows", "how is"],
+    ["i'm", "i am"], ["im", "i am"], ["you're", "you are"], ["youre", "you are"],
+    ["it's", "it is"], ["its", "it is"], ["that's", "that is"], ["thats", "that is"],
+    ["don't", "do not"], ["dont", "do not"], ["can't", "cannot"], ["cant", "cannot"],
+    ["isn't", "is not"], ["isnt", "is not"], ["aren't", "are not"], ["wasn't", "was not"],
+    ["haven't", "have not"], ["hasn't", "has not"], ["doesn't", "does not"], ["didn't", "did not"],
+    ["let's", "let us"], ["lets", "let us"]
+  ];
+  contractions.forEach(([from, to]) => {
+    const re = new RegExp("\\b" + from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
+    t = t.replace(re, to);
+  });
+  t = t.replace(/[.?!,;:'"]/g, " ").replace(/\s+/g, " ").trim();
+  return t;
+}
+
+function getChatbotResponse(userText) {
+  const normalized = normalizeForMatching(userText);
+  const rawLower = userText.toLowerCase().trim();
+  const keys = Object.keys(CONFIG.knowledgeBase).filter(k => k !== "default");
+  keys.sort((a, b) => b.length - a.length);
+
+  for (const key of keys) {
+    const keyNorm = normalizeForMatching(key);
+    if (normalized.includes(keyNorm) || rawLower.includes(key)) {
+      return CONFIG.knowledgeBase[key];
+    }
+  }
+  return CONFIG.knowledgeBase["default"];
+}
+
 function sendChatMessage() {
   const input = document.getElementById("chatbotInput");
   const messagesContainer = document.getElementById("chatbotMessages");
@@ -720,34 +774,20 @@ function sendChatMessage() {
   const userText = input.value.trim();
   if (!userText) return;
 
-  // 1. Add User Message
   addMessageToChat(userText, "user-message");
   input.value = "";
 
-  // 2. Generate Bot Response (match longest phrase first so "tell me about your education" matches before "your")
   const lowerText = userText.toLowerCase().trim();
-  let botResponse = CONFIG.knowledgeBase["default"];
+  let botResponse = getChatbotResponse(userText);
 
-  const keys = Object.keys(CONFIG.knowledgeBase).filter(k => k !== "default");
-  keys.sort((a, b) => b.length - a.length); // longest first
-
-  for (const key of keys) {
-    if (lowerText.includes(key)) {
-      botResponse = CONFIG.knowledgeBase[key];
-      break;
-    }
-  }
-
-  // 3. Let bot try to control the page (colors, music)
   const controlResult = handleChatbotControl(lowerText, userText);
   if (controlResult?.botResponseOverride) {
     botResponse = controlResult.botResponseOverride;
   }
 
-  // 4. Simulate "Thinking" delay
   setTimeout(() => {
     addMessageToChat(botResponse, "bot-message");
-  }, 600);
+  }, 500);
 }
 window.sendChatMessage = sendChatMessage;
 

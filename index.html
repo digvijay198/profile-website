@@ -10,8 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Animated Background -->
-    <div class="animated-bg"></div>
+    <!-- Animated Background (day: sun / night: moon + stars) -->
+    <div class="animated-bg" id="animatedBg">
+        <div class="bg-sun" aria-hidden="true"></div>
+        <div class="bg-moon" aria-hidden="true"></div>
+        <div class="bg-stars" aria-hidden="true"></div>
+    </div>
     
     <!-- Music Player -->
     <div class="music-player" id="musicPlayer">
