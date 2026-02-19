@@ -322,7 +322,7 @@
             <div class="tools-grid">
                 <!-- Weather Widget -->
                 <div class="tool-card weather-card">
-                    <h3 class="tool-title">Weather </h3>
+                    <h3 class="tool-title">Weather</h3>
                     <div class="weather-widget" id="weatherWidget">
                         <div class="weather-loading">Loading weather...</div>
                         <div class="weather-content" style="display: none;">
@@ -414,9 +414,13 @@
                 </div>
             </div>
             <div class="chatbot-input-container">
-                <input type="text" id="chatbotInput" placeholder="Type your message..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <input type="text" id="chatbotInput" placeholder="Type or use mic..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button type="button" id="chatbotMic" class="chatbot-mic" title="Voice input" onclick="toggleVoiceInput()" aria-label="Voice input">
+                    <span class="mic-icon">🎤</span>
+                </button>
                 <button id="chatbotSend" class="chatbot-send" onclick="sendChatMessage()">Send</button>
             </div>
+            <div class="chatbot-voice-status" id="chatbotVoiceStatus" style="display: none;">Listening...</div>
         </div>
     </div>
 

@@ -1161,12 +1161,14 @@ body {
     position: absolute;
     bottom: 80px;
     right: 0;
-    width: 350px;
-    height: 500px;
+    width: 420px;
+    max-width: calc(100vw - 40px);
+    height: 560px;
+    max-height: 85vh;
     background: var(--dark-card);
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(99, 102, 241, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
     display: none;
     flex-direction: column;
     overflow: hidden;
@@ -1245,32 +1247,81 @@ body {
 
 .chatbot-input-container {
     padding: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
     display: flex;
     gap: 0.5rem;
+    align-items: center;
 }
 
 .chatbot-input {
     flex: 1;
-    padding: 10px;
+    min-width: 0;
+    padding: 10px 14px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     color: var(--text-primary);
     font-family: 'Poppins', sans-serif;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 
 .chatbot-input:focus {
     outline: none;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.chatbot-mic {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.chatbot-mic:hover {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.chatbot-mic.listening {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+    animation: mic-pulse 1s ease infinite;
+}
+
+.chatbot-mic .mic-icon {
+    font-size: 1.25rem;
+}
+
+@keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+.chatbot-voice-status {
+    padding: 6px 1rem;
+    font-size: 0.85rem;
+    color: var(--accent-color);
+    text-align: center;
+    background: rgba(99, 102, 241, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chatbot-send {
     padding: 10px 20px;
     background: var(--gradient-1);
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     color: white;
     cursor: pointer;
     font-weight: 600;

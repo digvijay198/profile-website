@@ -9,22 +9,22 @@ const CONFIG = {
 
   // ---------- API KEYS (add your keys here) ----------
   // Weather widget: get a free key at https://openweathermap.org/api
-  weatherAPIKey: "b274ffcf25df2f311d16051068ced176",
+  weatherAPIKey: "",
   defaultLocation: "Caldwell, NJ",
 
   // Google Maps: add your key in index.html in the <script> tag that loads maps.googleapis.com
   // (Maps key must be in the HTML script src; no variable here.)
 
-  // ---------- Profile (optional overrides) ----------
-  // profileImage: "profile.jpg",
-  // userEmail: "dsimkhada@caldwell.edu",
-  // userPhone: "+1 (475) 257-2067",
-  // userLocation: "Caldwell, NJ",
-  // aboutText: "...",
-  // yearsExperience: "2+",
-  // projectsCount: "4+",
-  // clientsCount: "20+",
-  // resumeLink: "resume.pdf",
+  // ---------- Profile & resume (used by the page and Download Resume button) ----------
+  profileImage: "profile.jpg",
+  userEmail: "dsimkhada@caldwell.edu",
+  userPhone: "+1 (475) 257-2067",
+  userLocation: "Caldwell, NJ",
+  aboutText: "I'm a passionate professional with expertise in various domains. I love creating innovative solutions and pushing the boundaries of what's possible. My journey has been filled with learning, growth, and meaningful contributions to every project I've been part of.",
+  yearsExperience: "2+",
+  projectsCount: "4+",
+  clientsCount: "20+",
+  resumeLink: "resume.pdf",
 
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
@@ -148,7 +148,7 @@ if (document.readyState === "loading") {
 function initializePersonalInfo() {
   const setText = (id, value) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = value;
+    if (el && value != null && value !== "") el.textContent = value;
   };
 
   setText("userName", CONFIG.userName);
@@ -163,17 +163,15 @@ function initializePersonalInfo() {
 
   const profileImageEl = document.getElementById("profileImage");
   if (profileImageEl) {
-    profileImageEl.alt = CONFIG.userName;
-    // Only set if blank or placeholder
+    if (CONFIG.userName) profileImageEl.alt = CONFIG.userName;
     const currentSrc = profileImageEl.getAttribute("src") || "";
-    if (!currentSrc || currentSrc.includes("placeholder")) {
+    if (CONFIG.profileImage && (!currentSrc || currentSrc.includes("placeholder"))) {
       profileImageEl.src = CONFIG.profileImage;
     }
   }
 
-  // Footer
   const footerP = document.querySelector(".footer p");
-  if (footerP) {
+  if (footerP && CONFIG.userName) {
     footerP.innerHTML = `&copy; ${new Date().getFullYear()} ${CONFIG.userName}. All rights reserved.`;
   }
 }
@@ -629,7 +627,6 @@ window.closeChatbot = closeChatbot;
 function initializeChatbot() {
   const input = document.getElementById("chatbotInput");
   if (!input) return;
-  // Extra safety: ensure Enter sends the message
   input.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -637,6 +634,83 @@ function initializeChatbot() {
     }
   });
 }
+
+// Voice input (Web Speech API)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function toggleVoiceInput() {
+  const input = document.getElementById("chatbotInput");
+  const micBtn = document.getElementById("chatbotMic");
+  const statusEl = document.getElementById("chatbotVoiceStatus");
+  if (!input || !micBtn || !statusEl) return;
+
+  if (!SpeechRecognition) {
+    alert("Voice input is not supported in this browser. Try Chrome or Edge.");
+    return;
+  }
+
+  if (window._chatbotRecognition && window._chatbotRecognitionActive) {
+    stopVoiceInput();
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onstart = () => {
+    window._chatbotRecognitionActive = true;
+    micBtn.classList.add("listening");
+    statusEl.style.display = "block";
+    statusEl.textContent = "Listening...";
+  };
+
+  recognition.onend = () => {
+    window._chatbotRecognitionActive = false;
+    micBtn.classList.remove("listening");
+    statusEl.style.display = "none";
+  };
+
+  recognition.onresult = (event) => {
+    let final = "";
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        final += transcript;
+      } else {
+        interim += transcript;
+      }
+    }
+    const text = (final || interim).trim();
+    if (text) {
+      input.value = input.value ? input.value + " " + text : text;
+    }
+  };
+
+  recognition.onerror = (event) => {
+    if (event.error === "not-allowed") {
+      statusEl.textContent = "Microphone access denied.";
+      setTimeout(() => { statusEl.style.display = "none"; }, 2000);
+    }
+  };
+
+  window._chatbotRecognition = recognition;
+  recognition.start();
+}
+
+function stopVoiceInput() {
+  if (window._chatbotRecognition && window._chatbotRecognitionActive) {
+    window._chatbotRecognition.stop();
+  }
+  const micBtn = document.getElementById("chatbotMic");
+  const statusEl = document.getElementById("chatbotVoiceStatus");
+  if (micBtn) micBtn.classList.remove("listening");
+  if (statusEl) statusEl.style.display = "none";
+}
+
+window.toggleVoiceInput = toggleVoiceInput;
 
 function sendChatMessage() {
   const input = document.getElementById("chatbotInput");
