@@ -120,8 +120,7 @@ const CONFIG = {
 // GLOBALS
 // ============================================
 
-// Firebase (for PIN-based video call)
-// Using compat SDK loaded in index.html
+// Firebase (for PIN-based video call) – Realtime Database required
 const firebaseConfig = {
   apiKey: "AIzaSyCXDdT8Ah1k337HFnsFUIl7kU_lR8HP9XM",
   authDomain: "personal-website-819ad.firebaseapp.com",
@@ -129,13 +128,23 @@ const firebaseConfig = {
   storageBucket: "personal-website-819ad.firebasestorage.app",
   messagingSenderId: "131974557257",
   appId: "1:131974557257:web:64d2bf169240164b531998",
-  measurementId: "G-6E15CE82X1"
+  measurementId: "G-6E15CE82X1",
+  // Realtime Database URL – copy from Firebase Console → Realtime Database (if your DB is in another region, replace with the URL shown there)
+  databaseURL: "https://personal-website-819ad-default-rtdb.firebaseio.com"
 };
 
 let db = null;
-if (typeof firebase !== "undefined") {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
+function initFirebaseDb() {
+  if (db) return db;
+  if (typeof firebase === "undefined") return null;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    return db;
+  } catch (e) {
+    console.error("Firebase init error:", e);
+    return null;
+  }
 }
 
 let weatherWidget;
@@ -1463,8 +1472,6 @@ window.downloadResume = downloadResume;
 // ============================================
 
 function initializeCallFeature() {
-  if (!db) return; // Firebase not available
-
   const pinInput = document.getElementById("callPin");
   const createBtn = document.getElementById("callCreate");
   const joinBtn = document.getElementById("callJoin");
@@ -1474,6 +1481,12 @@ function initializeCallFeature() {
   const remoteVideo = document.getElementById("remoteVideo");
 
   if (!pinInput || !createBtn || !joinBtn || !hangupBtn || !localVideo || !remoteVideo) return;
+
+  db = initFirebaseDb();
+  if (!db) {
+    if (statusEl) statusEl.textContent = "Video call unavailable: Firebase not loaded. Check that the Firebase scripts load before script.js.";
+    return;
+  }
 
   let pc = null;
   let localStream = null;
@@ -1539,33 +1552,41 @@ function initializeCallFeature() {
       setStatus("Use a 4–6 digit numeric PIN.");
       return;
     }
-    isHost = true;
-    callRef = db.ref(`calls/${pin}`);
-    await callRef.remove();
+    try {
+      setStatus("Starting host…");
+      isHost = true;
+      callRef = db.ref("calls/" + pin);
+      await callRef.remove();
 
-    await createPeerConnection(pin);
+      await createPeerConnection(pin);
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await callRef.child("offer").set(offer);
-    setStatus(`Hosting call. Share PIN ${pin} and wait for guest to join.`);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await callRef.child("offer").set(offer);
+      setStatus("Hosting call. Share PIN " + pin + " and wait for guest to join.");
 
-    // Listen for answer
-    callRef.child("answer").on("value", async (snap) => {
-      const answer = snap.val();
-      if (answer && !pc.currentRemoteDescription) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        setStatus("Guest connected.");
-      }
-    });
+      callRef.child("answer").on("value", async (snap) => {
+        const answer = snap.val();
+        if (answer && pc && !pc.currentRemoteDescription) {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            setStatus("Guest connected.");
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      });
 
-    // Listen for guest ICE
-    callRef.child("candidates/guest").on("child_added", (snap) => {
-      const candidate = snap.val();
-      if (candidate && pc) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
+      callRef.child("candidates/guest").on("child_added", (snap) => {
+        const candidate = snap.val();
+        if (candidate && pc) {
+          pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(function () {});
+        }
+      });
+    } catch (err) {
+      console.error("Host error:", err);
+      setStatus("Error: " + (err.message || err.code || "Could not start host. Enable Realtime Database in Firebase Console and set rules to allow read/write."));
+    }
   });
 
   joinBtn.addEventListener("click", async () => {
@@ -1574,31 +1595,36 @@ function initializeCallFeature() {
       setStatus("Use a 4–6 digit numeric PIN.");
       return;
     }
-    isHost = false;
-    callRef = db.ref(`calls/${pin}`);
+    try {
+      setStatus("Joining…");
+      isHost = false;
+      callRef = db.ref("calls/" + pin);
 
-    const offerSnap = await callRef.child("offer").once("value");
-    const offer = offerSnap.val();
-    if (!offer) {
-      setStatus("No host found for that PIN yet. Ask them to click Host first.");
-      return;
-    }
-
-    await createPeerConnection(pin);
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await callRef.child("answer").set(answer);
-    setStatus("Connected to host.");
-
-    // Listen for host ICE
-    callRef.child("candidates/host").on("child_added", (snap) => {
-      const candidate = snap.val();
-      if (candidate && pc) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate));
+      const offerSnap = await callRef.child("offer").once("value");
+      const offer = offerSnap.val();
+      if (!offer) {
+        setStatus("No host for that PIN. Ask them to click Host first.");
+        return;
       }
-    });
+
+      await createPeerConnection(pin);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await callRef.child("answer").set(answer);
+      setStatus("Connected to host.");
+
+      callRef.child("candidates/host").on("child_added", (snap) => {
+        const candidate = snap.val();
+        if (candidate && pc) {
+          pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(function () {});
+        }
+      });
+    } catch (err) {
+      console.error("Join error:", err);
+      setStatus("Error: " + (err.message || err.code || "Could not join. Check Firebase Realtime Database is enabled and rules allow read/write."));
+    }
   });
 
   hangupBtn.addEventListener("click", () => {
