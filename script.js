@@ -1565,24 +1565,40 @@ function initializeCallFeature() {
       await callRef.child("offer").set(offer);
       setStatus("Hosting call. Share PIN " + pin + " and wait for guest to join.");
 
+      const pendingGuestCandidates = [];
+      const flushGuestCandidates = async () => {
+        while (pendingGuestCandidates.length && pc) {
+          const c = pendingGuestCandidates.shift();
+          await pc.addIceCandidate(new RTCIceCandidate(c)).catch(function () {});
+        }
+      };
+
       callRef.child("answer").on("value", async (snap) => {
         const answer = snap.val();
         if (answer && pc && !pc.currentRemoteDescription) {
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(answer));
             setStatus("Guest connected.");
+            await flushGuestCandidates();
           } catch (e) {
             console.error(e);
           }
         }
       });
 
-      callRef.child("candidates/guest").on("child_added", (snap) => {
+      const addGuestCandidate = (snap) => {
         const candidate = snap.val();
-        if (candidate && pc) {
+        if (!candidate || !pc) return;
+        if (pc.currentRemoteDescription) {
           pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(function () {});
+        } else {
+          pendingGuestCandidates.push(candidate);
         }
-      });
+      };
+      const guestCandidatesRef = callRef.child("candidates/guest");
+      const guestExisting = await guestCandidatesRef.once("value");
+      guestExisting.forEach((snap) => addGuestCandidate(snap));
+      guestCandidatesRef.on("child_added", addGuestCandidate);
     } catch (err) {
       console.error("Host error:", err);
       setStatus("Error: " + (err.message || err.code || "Could not start host. Enable Realtime Database in Firebase Console and set rules to allow read/write."));
@@ -1615,12 +1631,16 @@ function initializeCallFeature() {
       await callRef.child("answer").set(answer);
       setStatus("Connected to host.");
 
-      callRef.child("candidates/host").on("child_added", (snap) => {
+      const addHostCandidate = (snap) => {
         const candidate = snap.val();
         if (candidate && pc) {
           pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(function () {});
         }
-      });
+      };
+      const hostCandidatesRef = callRef.child("candidates/host");
+      const hostExisting = await hostCandidatesRef.once("value");
+      hostExisting.forEach((snap) => addHostCandidate(snap));
+      hostCandidatesRef.on("child_added", addHostCandidate);
     } catch (err) {
       console.error("Join error:", err);
       setStatus("Error: " + (err.message || err.code || "Could not join. Check Firebase Realtime Database is enabled and rules allow read/write."));
