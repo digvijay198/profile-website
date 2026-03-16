@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Professional Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Poppins', 'sans-serif'] },
+            colors: { primary: '#6366f1', accent: '#ec4899' }
+          }
+        }
+      };
+    </script>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,8 +30,8 @@
     
     <!-- Music Player -->
     <div class="music-player" id="musicPlayer">
-        <button class="music-toggle" id="musicToggle">
-            <span class="music-icon">🎵</span>
+        <button class="music-toggle" id="musicToggle" aria-label="Toggle music">
+            <i data-lucide="music" class="music-icon w-6 h-6" aria-hidden="true"></i>
         </button>
         <audio id="backgroundMusic" loop>
             <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
@@ -142,56 +153,56 @@
             <h2 class="section-title">Skills</h2>
             <div class="skills-grid" id="skillsGrid">
                 <div class="skill-card">
-                    <div class="skill-icon">🐍</div>
+                    <div class="skill-icon"><i data-lucide="code-2" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">Python</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 90%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">🌐</div>
+                    <div class="skill-icon"><i data-lucide="globe" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">HTML/CSS</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 85%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">🎨</div>
+                    <div class="skill-icon"><i data-lucide="palette" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">Figma</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 88%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">🤖</div>
+                    <div class="skill-icon"><i data-lucide="bot" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">TensorFlow</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 75%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">👁️</div>
+                    <div class="skill-icon"><i data-lucide="scan-eye" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">OpenCV</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 80%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">📱</div>
+                    <div class="skill-icon"><i data-lucide="smartphone" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">Responsive Web</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 85%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">✏️</div>
+                    <div class="skill-icon"><i data-lucide="pencil-ruler" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">Wireframing</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 82%"></div>
                     </div>
                 </div>
                 <div class="skill-card">
-                    <div class="skill-icon">🎨</div>
+                    <div class="skill-icon"><i data-lucide="pen-tool" class="w-8 h-8" aria-hidden="true"></i></div>
                     <h3 class="skill-name">Canva</h3>
                     <div class="skill-level">
                         <div class="skill-bar" style="width: 90%"></div>
@@ -207,7 +218,7 @@
             <h2 class="section-title">Projects</h2>
             <div class="projects-grid" id="projectsGrid">
                 <div class="project-card">
-                    <div class="project-icon">🍳</div>
+                    <div class="project-icon"><i data-lucide="utensils-crossed" class="w-10 h-10" aria-hidden="true"></i></div>
                     <h3 class="project-name">Chef on Call</h3>
                     <p class="project-date">March 2025</p>
                     <p class="project-description">Home Chef Booking app - Conducted user research, created wireframes, and developed interactive prototypes to enhance user experience. Co-led the design and prototyping using Figma.</p>
@@ -218,7 +229,7 @@
                     </div>
                 </div>
                 <div class="project-card">
-                    <div class="project-icon">🎭</div>
+                    <div class="project-icon"><i data-lucide="scan-face" class="w-10 h-10" aria-hidden="true"></i></div>
                     <h3 class="project-name">Face Filter</h3>
                     <p class="project-date">March 2024</p>
                     <p class="project-description">Created a Face filter program in Python using libraries like OpenCV and cvzone. Implemented real-time face detection and filter application.</p>
@@ -229,7 +240,7 @@
                     </div>
                 </div>
                 <div class="project-card">
-                    <div class="project-icon">🎤</div>
+                    <div class="project-icon"><i data-lucide="mic" class="w-10 h-10" aria-hidden="true"></i></div>
                     <h3 class="project-name">Voice Assistant</h3>
                     <p class="project-date">June 2024</p>
                     <p class="project-description">Created a Simple Voice Assistant program in Python using libraries like speech_recognition, pyttsx3, pywhatkit, and pyjokes. Features voice commands and responses.</p>
@@ -240,7 +251,7 @@
                     </div>
                 </div>
                 <div class="project-card">
-                    <div class="project-icon">👁️</div>
+                    <div class="project-icon"><i data-lucide="eye" class="w-10 h-10" aria-hidden="true"></i></div>
                     <h3 class="project-name">Face Detection</h3>
                     <p class="project-date">June 2024</p>
                     <p class="project-description">Created a Face Detection program in Python using libraries like OpenCV and matplotlib. Implemented real-time face detection with visualization capabilities.</p>
@@ -330,7 +341,7 @@
                     <div class="weather-widget" id="weatherWidget">
                         <div class="weather-loading">Loading weather...</div>
                         <div class="weather-content" style="display: none;">
-                            <div class="weather-icon" id="weatherIcon">☀️</div>
+                            <div class="weather-icon flex items-center justify-center" id="weatherIcon"><i data-lucide="sun" class="w-14 h-14" aria-hidden="true"></i></div>
                             <div class="weather-temp" id="weatherTemp">--°C</div>
                             <div class="weather-desc" id="weatherDesc">--</div>
                             <div class="weather-location" id="weatherLocation">--</div>
@@ -367,21 +378,21 @@
             <div class="contact-content">
                 <div class="contact-info">
                     <div class="contact-item">
-                        <div class="contact-icon">📧</div>
+                        <div class="contact-icon"><i data-lucide="mail" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
                             <h4>Email</h4>
                             <p id="userEmail">your.email@example.com</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <div class="contact-icon">📱</div>
+                        <div class="contact-icon"><i data-lucide="smartphone" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
                             <h4>Phone</h4>
                             <p id="userPhone">+1 (555) 123-4567</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <div class="contact-icon">📍</div>
+                        <div class="contact-icon"><i data-lucide="map-pin" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
                             <h4>Location</h4>
                             <p id="userLocation">Your City, Country</p>
@@ -411,7 +422,7 @@
                         <video id="videoMessageLive" class="video-message-video" playsinline muted autoplay></video>
                         <video id="videoMessagePlayback" class="video-message-video" playsinline controls style="display: none;"></video>
                         <div id="videoMessagePlaceholder" class="video-message-placeholder">
-                            <span class="video-message-placeholder-icon">🎥</span>
+                            <span class="video-message-placeholder-icon"><i data-lucide="video" class="w-12 h-12" aria-hidden="true"></i></span>
                             <span>Camera preview will appear here</span>
                         </div>
                         <div id="videoMessageError" class="video-message-error" style="display: none;"></div>
@@ -468,8 +479,8 @@
 
     <!-- Chatbot -->
     <div class="chatbot-container" id="chatbotContainer">
-        <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()">
-            <span class="chat-icon">💬</span>
+        <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" aria-label="Open chat">
+            <i data-lucide="message-circle" class="chat-icon w-7 h-7" aria-hidden="true"></i>
         </div>
         <div class="chatbot-window" id="chatbotWindow">
             <div class="chatbot-header">
@@ -479,14 +490,14 @@
             <div class="chatbot-messages" id="chatbotMessages">
                 <div class="chat-message bot-message">
                     <div class="message-content">
-                        Hello! I'm here to answer questions about Digvijay Simkhada. Ask me about education, experience, projects, skills, certificates, or contact information! 👋
+                        Hello! I'm here to answer questions about Digvijay Simkhada. Ask me about education, experience, projects, skills, certificates, or contact information!
                     </div>
                 </div>
             </div>
             <div class="chatbot-input-container">
                 <input type="text" id="chatbotInput" placeholder="Type or use mic..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
                 <button type="button" id="chatbotMic" class="chatbot-mic" title="Voice input" onclick="toggleVoiceInput()" aria-label="Voice input">
-                    <span class="mic-icon">🎤</span>
+                    <i data-lucide="mic" class="mic-icon w-5 h-5" aria-hidden="true"></i>
                 </button>
                 <button id="chatbotSend" class="chatbot-send" onclick="sendChatMessage()">Send</button>
             </div>
@@ -497,15 +508,26 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="social-links">
-                <a href="https://www.linkedin.com/in/digvijay-simkhada-5891b6316" target="_blank" class="social-link">LinkedIn</a>
-                <a href="#" class="social-link">GitHub</a>
-                <a href="#" class="social-link">Email</a>
+            <div class="social-links flex flex-wrap justify-center items-center gap-4">
+                <a href="https://www.linkedin.com/in/digvijay-simkhada-5891b6316" target="_blank" rel="noopener" class="social-link inline-flex items-center gap-2">
+                    <i data-lucide="linkedin" class="w-5 h-5" aria-hidden="true"></i>
+                    LinkedIn
+                </a>
+                <a href="#" class="social-link inline-flex items-center gap-2">
+                    <i data-lucide="github" class="w-5 h-5" aria-hidden="true"></i>
+                    GitHub
+                </a>
+                <a href="mailto:dsimkhada@caldwell.edu" class="social-link inline-flex items-center gap-2">
+                    <i data-lucide="mail" class="w-5 h-5" aria-hidden="true"></i>
+                    Email
+                </a>
             </div>
             <p>&copy; 2024 Your Name. All rights reserved.</p>
         </div>
     </footer>
 
+    <!-- Lucide Icons (replace emojis with SVG icons) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Firebase (for PIN-based video calls) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>

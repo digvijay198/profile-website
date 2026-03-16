@@ -35,7 +35,7 @@ const CONFIG = {
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
       // Greetings & intro
-      "hello": "Hi there! 👋 I'm Digvijay's virtual assistant. Ask me anything about **Digvijay**—skills, projects, experience, education, contact, or even ask me to **change the theme** or **play music**!",
+      "hello": "Hi there! I'm Digvijay's virtual assistant. Ask me anything about **Digvijay**—skills, projects, experience, education, contact, or even ask me to **change the theme** or **play music**!",
       "hi": "Hello! How can I help you learn more about Digvijay?",
       "hey": "Hey! Ask me about Digvijay's background, projects, skills, or contact.",
       "who are you": "I'm the virtual assistant for **Digvijay Simkhada**. I can tell you about his education, experience, projects, skills, and how to reach him!",
@@ -129,7 +129,7 @@ const firebaseConfig = {
   messagingSenderId: "131974557257",
   appId: "1:131974557257:web:64d2bf169240164b531998",
   measurementId: "G-6E15CE82X1",
-  // Realtime Database URL – copy from Firebase Console → Realtime Database (if your DB is in another region, replace with the URL shown there)
+  // Required for video call – get from Firebase Console → Build → Realtime Database → URL
   databaseURL: "https://personal-website-819ad-default-rtdb.firebaseio.com"
 };
 
@@ -154,6 +154,12 @@ let map, geocoder, marker;
 // INIT
 // ============================================
 
+function createLucideIcons() {
+  if (typeof lucide !== "undefined" && typeof lucide.createIcons === "function") {
+    lucide.createIcons();
+  }
+}
+
 function initializeAll() {
   initializePersonalInfo();
   initializeMusicPlayer();
@@ -169,6 +175,7 @@ function initializeAll() {
   initializeContactForm();
   initializeVideoMessage();
   initializeGames();
+  createLucideIcons();
 }
 
 if (document.readyState === "loading") {
@@ -502,7 +509,12 @@ async function getWeatherByCoords(lat, lng, label = "") {
 }
 
 function renderWeather(data, locationLabel) {
-  document.getElementById("weatherIcon").textContent = getWeatherEmoji(data.weather?.[0]?.main);
+  const iconName = getWeatherIconName(data.weather?.[0]?.main);
+  const weatherIconEl = document.getElementById("weatherIcon");
+  if (weatherIconEl) {
+    weatherIconEl.innerHTML = `<i data-lucide="${iconName}" class="w-14 h-14" aria-hidden="true"></i>`;
+    createLucideIcons();
+  }
   document.getElementById("weatherTemp").textContent = `${Math.round(data.main?.temp ?? 0)}°C`;
   document.getElementById("weatherDesc").textContent = (data.weather?.[0]?.description || "--");
   document.getElementById("weatherLocation").textContent = locationLabel;
@@ -568,19 +580,19 @@ function applyThemeFromWeather(data) {
   }
 }
 
-function getWeatherEmoji(main = "") {
+function getWeatherIconName(main = "") {
   const map = {
-    Clear: "☀️",
-    Clouds: "☁️",
-    Rain: "🌧️",
-    Drizzle: "🌦️",
-    Thunderstorm: "⛈️",
-    Snow: "❄️",
-    Mist: "🌫️",
-    Fog: "🌫️",
-    Haze: "🌫️"
+    Clear: "sun",
+    Clouds: "cloud",
+    Rain: "cloud-rain",
+    Drizzle: "cloud-drizzle",
+    Thunderstorm: "cloud-lightning",
+    Snow: "snowflake",
+    Mist: "cloud-fog",
+    Fog: "cloud-fog",
+    Haze: "cloud-fog"
   };
-  return map[main] || "🌤️";
+  return map[main] || "cloud-sun";
 }
 
 function showWeatherError(message) {
@@ -1020,7 +1032,7 @@ function handleChatbotControl(lowerText, originalText) {
       // #endregion
       window.playBackgroundMusic();
       return {
-        botResponseOverride: "🎵 Music turned <b>on</b> for you!"
+        botResponseOverride: "Music turned <b>on</b> for you!"
       };
     } else {
       // #region agent log
@@ -1036,7 +1048,7 @@ function handleChatbotControl(lowerText, originalText) {
       // #endregion
       window.pauseBackgroundMusic();
       return {
-        botResponseOverride: "🔇 Music turned <b>off</b>."
+        botResponseOverride: "Music turned <b>off</b>."
       };
     } else {
       // #region agent log
