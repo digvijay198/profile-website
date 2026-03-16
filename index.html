@@ -397,6 +397,72 @@
                     </form>
                 </div>
             </div>
+
+            <!-- Record Video Message -->
+            <div class="video-message-section">
+                <h3 class="video-message-title">Record a video message</h3>
+                <p class="video-message-desc">Record a short video and send it directly to the profile owner.</p>
+                <div class="video-message-box">
+                    <div class="video-message-sender-fields">
+                        <input type="text" id="videoMessageSenderName" class="video-message-input" placeholder="Your name (optional)">
+                        <input type="email" id="videoMessageSenderEmail" class="video-message-input" placeholder="Your email (optional)">
+                    </div>
+                    <div class="video-message-preview-wrap">
+                        <video id="videoMessageLive" class="video-message-video" playsinline muted autoplay></video>
+                        <video id="videoMessagePlayback" class="video-message-video" playsinline controls style="display: none;"></video>
+                        <div id="videoMessagePlaceholder" class="video-message-placeholder">
+                            <span class="video-message-placeholder-icon">🎥</span>
+                            <span>Camera preview will appear here</span>
+                        </div>
+                        <div id="videoMessageError" class="video-message-error" style="display: none;"></div>
+                    </div>
+                    <div class="video-message-controls">
+                        <button type="button" id="videoMessageStart" class="btn btn-primary video-message-btn">Start camera</button>
+                        <button type="button" id="videoMessageRecord" class="btn btn-primary video-message-btn" style="display: none;">Record</button>
+                        <button type="button" id="videoMessageStop" class="btn video-message-btn video-message-btn-stop" style="display: none;">Stop</button>
+                        <button type="button" id="videoMessageRerecord" class="btn btn-secondary video-message-btn" style="display: none;">Record again</button>
+                        <a id="videoMessageDownload" class="btn btn-secondary video-message-btn" style="display: none;" download="video-message.webm">Download</a>
+                        <button type="button" id="videoMessageSend" class="btn btn-primary video-message-btn" style="display: none;">Send to owner</button>
+                    </div>
+                    <p id="videoMessageTimer" class="video-message-timer" style="display: none;">Recording: 0:00</p>
+                    <p id="videoMessageStatus" class="video-message-status" style="display: none;"></p>
+                    <p class="video-message-hint">Keep your video under 1 minute so it can be sent by email. Then click "Send to owner" or download a copy.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call Section -->
+    <section id="call" class="section call-section">
+        <div class="container">
+            <h2 class="section-title">Live Video Call</h2>
+            <div class="call-grid">
+                <div class="call-panel">
+                    <h3 class="call-title">Call the Owner (PIN)</h3>
+                    <p class="call-desc">
+                        One person clicks <strong>Host</strong> and shares the 6‑digit PIN. The other person clicks <strong>Join</strong> with the same PIN to start a private video call.
+                    </p>
+                    <div class="call-pin-row">
+                        <input id="callPin" class="call-pin-input" maxlength="6" placeholder="123456">
+                        <button id="callCreate" class="btn btn-primary">Host</button>
+                        <button id="callJoin" class="btn btn-secondary">Join</button>
+                    </div>
+                    <p id="callStatus" class="call-status"></p>
+                </div>
+                <div class="call-video-panel">
+                    <div class="call-video-wrapper">
+                        <h4>Me</h4>
+                        <video id="localVideo" class="call-video" autoplay playsinline muted></video>
+                    </div>
+                    <div class="call-video-wrapper">
+                        <h4>Guest</h4>
+                        <video id="remoteVideo" class="call-video" autoplay playsinline></video>
+                    </div>
+                    <div class="call-controls">
+                        <button id="callHangup" class="btn call-hangup" disabled>Hang up</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -439,6 +505,10 @@
             <p>&copy; 2024 Your Name. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Firebase (for PIN-based video calls) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
     <script src="script.js"></script>
     <!-- Google Maps API key: replace the key= value below with your own key from Google Cloud Console -->

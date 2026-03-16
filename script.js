@@ -8,8 +8,9 @@ const CONFIG = {
   userTitle: "Computer Science Student | Honors Program",
 
   // ---------- API KEYS (add your keys here) ----------
-  // Weather widget: get a free key at https://openweathermap.org/api
-  weatherAPIKey: "",
+  // Weather widget: uses OpenWeatherMap (you can replace this with your own key)
+  // Get a free key at https://openweathermap.org/api and paste it here
+  weatherAPIKey: "b274ffcf25df2f311d16051068ced176",
   defaultLocation: "Caldwell, NJ",
 
   // Google Maps: add your key in index.html in the <script> tag that loads maps.googleapis.com
@@ -25,6 +26,11 @@ const CONFIG = {
   projectsCount: "4+",
   clientsCount: "20+",
   resumeLink: "resume.pdf",
+
+  // Video message: Formspree form ID so visitors can send the recorded video to you by email.
+  // 1. Create a form at https://formspree.io and get the form ID from the URL (e.g. formspree.io/f/abcxyz → abcxyz).
+  // 2. In Formspree dashboard, open your form → Settings and ensure file uploads are allowed (max 10 MB on free plan).
+  videoMessageFormspreeId: "xaqdvqba",
 
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
@@ -114,6 +120,24 @@ const CONFIG = {
 // GLOBALS
 // ============================================
 
+// Firebase (for PIN-based video call)
+// Using compat SDK loaded in index.html
+const firebaseConfig = {
+  apiKey: "AIzaSyCXDdT8Ah1k337HFnsFUIl7kU_lR8HP9XM",
+  authDomain: "personal-website-819ad.firebaseapp.com",
+  projectId: "personal-website-819ad",
+  storageBucket: "personal-website-819ad.firebasestorage.app",
+  messagingSenderId: "131974557257",
+  appId: "1:131974557257:web:64d2bf169240164b531998",
+  measurementId: "G-6E15CE82X1"
+};
+
+let db = null;
+if (typeof firebase !== "undefined") {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
 let weatherWidget;
 let map, geocoder, marker;
 
@@ -126,12 +150,15 @@ function initializeAll() {
   initializeMusicPlayer();
   initializeNavigationActiveLink();
   initializeSmoothScroll();
+  applyInitialThemeByLocalTime();
   initializeScrollAnimations();
   initializeSkillBars();
   initializeStatsCounter();
   initializeWeatherWidget();
   initializeChatbot();
+  initializeCallFeature();
   initializeContactForm();
+  initializeVideoMessage();
   initializeGames();
 }
 
@@ -477,6 +504,59 @@ function renderWeather(data, locationLabel) {
   const contentEl = weatherWidget.querySelector(".weather-content");
   loadingEl.style.display = "none";
   contentEl.style.display = "block";
+
+  // After weather loads, sync the visual theme with local time + conditions
+  applyThemeFromWeather(data);
+}
+
+// Apply an approximate theme based on local browser time before weather loads
+function applyInitialThemeByLocalTime() {
+  const hours = new Date().getHours();
+  const isDay = hours >= 7 && hours < 19;
+  const body = document.body;
+  const bg = document.getElementById("animatedBg");
+  if (!body || !bg) return;
+
+  body.classList.toggle("theme-day", isDay);
+  body.classList.toggle("theme-night", !isDay);
+  bg.classList.toggle("theme-day", isDay);
+  bg.classList.toggle("theme-night", !isDay);
+}
+
+// Refine theme using precise sunrise/sunset + weather at the queried location
+function applyThemeFromWeather(data) {
+  const body = document.body;
+  const bg = document.getElementById("animatedBg");
+  if (!body || !bg || !data) return;
+
+  const nowUtc = typeof data.dt === "number" ? data.dt : Math.floor(Date.now() / 1000);
+  const tzOffset = typeof data.timezone === "number" ? data.timezone : 0;
+  const sunriseUtc = data.sys?.sunrise;
+  const sunsetUtc = data.sys?.sunset;
+
+  // Convert to local timestamps in seconds
+  const localNow = nowUtc + tzOffset;
+  const localSunrise = typeof sunriseUtc === "number" ? sunriseUtc + tzOffset : null;
+  const localSunset = typeof sunsetUtc === "number" ? sunsetUtc + tzOffset : null;
+
+  let isDay = true;
+  if (localSunrise != null && localSunset != null) {
+    isDay = localNow >= localSunrise && localNow < localSunset;
+  }
+
+  const main = (data.weather?.[0]?.main || "").toLowerCase();
+  const isStormy = ["thunderstorm", "snow", "rain", "drizzle"].some((k) => main.includes(k));
+
+  body.classList.remove("theme-day", "theme-night");
+  bg.classList.remove("theme-day", "theme-night");
+
+  if (isDay && !isStormy) {
+    body.classList.add("theme-day");
+    bg.classList.add("theme-day");
+  } else {
+    body.classList.add("theme-night");
+    bg.classList.add("theme-night");
+  }
 }
 
 function getWeatherEmoji(main = "") {
@@ -1115,6 +1195,257 @@ function showFormMessage(message, type) {
 }
 
 // ============================================
+// VIDEO MESSAGE (record and send)
+// ============================================
+
+function initializeVideoMessage() {
+  const liveVideo = document.getElementById("videoMessageLive");
+  const playbackVideo = document.getElementById("videoMessagePlayback");
+  const placeholder = document.getElementById("videoMessagePlaceholder");
+  const errorEl = document.getElementById("videoMessageError");
+  const statusEl = document.getElementById("videoMessageStatus");
+  const startBtn = document.getElementById("videoMessageStart");
+  const recordBtn = document.getElementById("videoMessageRecord");
+  const stopBtn = document.getElementById("videoMessageStop");
+  const rerecordBtn = document.getElementById("videoMessageRerecord");
+  const downloadLink = document.getElementById("videoMessageDownload");
+  const sendBtn = document.getElementById("videoMessageSend");
+  const senderNameInput = document.getElementById("videoMessageSenderName");
+  const senderEmailInput = document.getElementById("videoMessageSenderEmail");
+
+  if (!liveVideo || !playbackVideo || !startBtn || !recordBtn || !stopBtn) return;
+
+  let stream = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordedBlob = null;
+  const MAX_RECORDING_SEC = 45;
+  let recordingTimerId = null;
+
+  function showError(msg) {
+    if (!errorEl) return;
+    errorEl.textContent = msg;
+    errorEl.style.display = "flex";
+    if (placeholder) placeholder.style.display = "none";
+  }
+
+  function hideError() {
+    if (errorEl) {
+      errorEl.style.display = "none";
+    }
+    if (placeholder) placeholder.style.display = "flex";
+  }
+
+  function showStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.display = "block";
+    statusEl.className = "video-message-status " + (type === "success" ? "success" : type === "error" ? "error" : "");
+  }
+
+  function hideStatus() {
+    if (statusEl) statusEl.style.display = "none";
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+    }
+    if (liveVideo.srcObject) {
+      liveVideo.srcObject = null;
+    }
+    if (placeholder) placeholder.style.display = "flex";
+    liveVideo.style.display = "none";
+  }
+
+  startBtn.addEventListener("click", async () => {
+    hideError();
+    hideStatus();
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      liveVideo.srcObject = stream;
+      liveVideo.style.display = "block";
+      if (placeholder) placeholder.style.display = "none";
+      startBtn.style.display = "none";
+      recordBtn.style.display = "inline-block";
+    } catch (err) {
+      console.error(err);
+      showError("Could not access camera or microphone. Please allow access and try again.");
+    }
+  });
+
+  const timerEl = document.getElementById("videoMessageTimer");
+  function startRecordingTimer() {
+    let sec = 0;
+    if (timerEl) {
+      timerEl.style.display = "block";
+      timerEl.textContent = "Recording: 0:00";
+    }
+    recordingTimerId = setInterval(() => {
+      sec += 1;
+      if (timerEl) timerEl.textContent = "Recording: " + Math.floor(sec / 60) + ":" + (sec < 10 ? "0" : "") + sec;
+      if (sec >= MAX_RECORDING_SEC && mediaRecorder && mediaRecorder.state !== "inactive") {
+        clearInterval(recordingTimerId);
+        recordingTimerId = null;
+        if (timerEl) timerEl.style.display = "none";
+        mediaRecorder.stop();
+      }
+    }, 1000);
+  }
+  function stopRecordingTimer() {
+    if (recordingTimerId) {
+      clearInterval(recordingTimerId);
+      recordingTimerId = null;
+    }
+    if (timerEl) timerEl.style.display = "none";
+  }
+
+  recordBtn.addEventListener("click", () => {
+    if (!stream) return;
+    hideStatus();
+    recordedChunks = [];
+    const options = { mimeType: "video/webm;codecs=vp9,opus" };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options.mimeType = "video/webm";
+    }
+    mediaRecorder = new MediaRecorder(stream, options);
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+      stopRecordingTimer();
+      recordedBlob = new Blob(recordedChunks, { type: options.mimeType });
+      const url = URL.createObjectURL(recordedBlob);
+      playbackVideo.src = url;
+      playbackVideo.style.display = "block";
+      liveVideo.style.display = "none";
+      if (placeholder) placeholder.style.display = "none";
+      recordBtn.style.display = "none";
+      stopBtn.style.display = "none";
+      rerecordBtn.style.display = "inline-block";
+      if (downloadLink) {
+        downloadLink.style.display = "inline-block";
+        downloadLink.href = url;
+        downloadLink.download = `video-message-${Date.now()}.webm`;
+      }
+      if (sendBtn) sendBtn.style.display = "inline-block";
+    };
+    mediaRecorder.start();
+    recordBtn.style.display = "none";
+    stopBtn.style.display = "inline-block";
+    startRecordingTimer();
+  });
+
+  stopBtn.addEventListener("click", () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+  });
+
+  if (sendBtn) {
+    sendBtn.addEventListener("click", async () => {
+      if (!recordedBlob) return;
+      const formId = (CONFIG.videoMessageFormspreeId || "").trim();
+      if (!formId) {
+        showStatus(
+          "Video sending is not set up yet. The profile owner can add a Formspree form ID in script.js (see CONFIG.videoMessageFormspreeId). Until then, please download the video and email it to " + (CONFIG.userEmail || "the owner") + ".",
+          "error"
+        );
+        return;
+      }
+      sendBtn.disabled = true;
+      showStatus("Uploading video, then sending link to owner...", "");
+      const fallbackMsg = "Please download the video and email it to " + (CONFIG.userEmail || "the owner") + ".";
+      try {
+        // Step 1: Upload video to temporary host (no file sent to Formspree – avoids "video upload not permitted")
+        const uploadForm = new FormData();
+        uploadForm.append("file", recordedBlob, `video-message-${Date.now()}.webm`);
+        let videoUrl = null;
+        const uploadRes = await fetch("https://0x0.st", {
+          method: "POST",
+          body: uploadForm
+        });
+        if (uploadRes.ok) {
+          const text = await uploadRes.text();
+          if (text && text.startsWith("http")) {
+            videoUrl = text.trim();
+          }
+        }
+        if (!videoUrl) {
+          // Fallback: try Litterbox (catbox.moe) temporary upload
+          const lbForm = new FormData();
+          lbForm.append("reqtype", "fileupload");
+          lbForm.append("time", "24h");
+          lbForm.append("fileToUpload", recordedBlob, `video-message-${Date.now()}.webm`);
+          const lbRes = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", { method: "POST", body: lbForm });
+          if (lbRes.ok) {
+            const lbData = await lbRes.json().catch(() => ({}));
+            if (lbData && lbData.url) videoUrl = lbData.url;
+          }
+        }
+        if (!videoUrl) {
+          showStatus("Could not upload video (temporary host unavailable). " + fallbackMsg, "error");
+          sendBtn.disabled = false;
+          return;
+        }
+        // Step 2: Send only text to Formspree (link + sender info) – no file attachment
+        showStatus("Sending link to profile owner...", "");
+        const formData = new FormData();
+        formData.append("_subject", "Video message from portfolio");
+        formData.append("message", "A visitor sent you a video message.\n\nDownload it here (link may expire after some time): " + videoUrl);
+        if (senderNameInput && senderNameInput.value.trim()) {
+          formData.append("name", senderNameInput.value.trim());
+        }
+        if (senderEmailInput && senderEmailInput.value.trim()) {
+          formData.append("email", senderEmailInput.value.trim());
+          formData.append("_replyto", senderEmailInput.value.trim());
+        }
+        const res = await fetch("https://formspree.io/f/" + formId, {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json" }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && (data.ok === true || res.status === 200)) {
+          showStatus("Your video has been sent. The profile owner will receive an email with a link to watch or download it.", "success");
+        } else {
+          let errMsg = data.error || (data.errors && Array.isArray(data.errors) && data.errors[0] && data.errors[0].message) || "Failed to send. " + fallbackMsg;
+          showStatus(errMsg, "error");
+          console.error("Formspree send failed:", res.status, data);
+        }
+      } catch (err) {
+        console.error("Video send error:", err);
+        showStatus("Network error. " + fallbackMsg, "error");
+      }
+      sendBtn.disabled = false;
+    });
+  }
+
+  rerecordBtn.addEventListener("click", () => {
+    hideStatus();
+    if (playbackVideo.src) {
+      URL.revokeObjectURL(playbackVideo.src);
+      playbackVideo.removeAttribute("src");
+      playbackVideo.load();
+    }
+    playbackVideo.style.display = "none";
+    rerecordBtn.style.display = "none";
+    if (downloadLink) downloadLink.style.display = "none";
+    if (sendBtn) sendBtn.style.display = "none";
+    if (stream) {
+      liveVideo.srcObject = stream;
+      liveVideo.style.display = "block";
+    }
+    if (placeholder) placeholder.style.display = stream ? "none" : "flex";
+    recordBtn.style.display = "inline-block";
+    recordedBlob = null;
+  });
+
+  window.addEventListener("beforeunload", stopCamera);
+}
+
+// ============================================
 // RESUME DOWNLOAD
 // ============================================
 
@@ -1126,6 +1457,156 @@ function downloadResume() {
   }
 }
 window.downloadResume = downloadResume;
+
+// ============================================
+// CALL FEATURE (PIN-based WebRTC using Firebase RTDB)
+// ============================================
+
+function initializeCallFeature() {
+  if (!db) return; // Firebase not available
+
+  const pinInput = document.getElementById("callPin");
+  const createBtn = document.getElementById("callCreate");
+  const joinBtn = document.getElementById("callJoin");
+  const hangupBtn = document.getElementById("callHangup");
+  const statusEl = document.getElementById("callStatus");
+  const localVideo = document.getElementById("localVideo");
+  const remoteVideo = document.getElementById("remoteVideo");
+
+  if (!pinInput || !createBtn || !joinBtn || !hangupBtn || !localVideo || !remoteVideo) return;
+
+  let pc = null;
+  let localStream = null;
+  let isHost = false;
+  let callRef = null;
+
+  const servers = {
+    iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }]
+  };
+
+  function setStatus(msg) {
+    if (statusEl) statusEl.textContent = msg;
+  }
+
+  async function getLocalStream() {
+    if (localStream) return localStream;
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    return localStream;
+  }
+
+  async function createPeerConnection(pin) {
+    pc = new RTCPeerConnection(servers);
+    const stream = await getLocalStream();
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+    pc.ontrack = (event) => {
+      const [remoteStream] = event.streams;
+      remoteVideo.srcObject = remoteStream;
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && callRef) {
+        db.ref(`calls/${pin}/candidates/${isHost ? "host" : "guest"}`).push(event.candidate.toJSON());
+      }
+    };
+
+    hangupBtn.disabled = false;
+  }
+
+  function cleanup(pin) {
+    if (pc) {
+      pc.onicecandidate = null;
+      pc.ontrack = null;
+      pc.close();
+      pc = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach((t) => t.stop());
+      localStream = null;
+      localVideo.srcObject = null;
+    }
+    remoteVideo.srcObject = null;
+    hangupBtn.disabled = true;
+    if (pin && callRef) {
+      db.ref(`calls/${pin}`).remove();
+    }
+  }
+
+  createBtn.addEventListener("click", async () => {
+    const pin = pinInput.value.trim();
+    if (!/^[0-9]{4,6}$/.test(pin)) {
+      setStatus("Use a 4–6 digit numeric PIN.");
+      return;
+    }
+    isHost = true;
+    callRef = db.ref(`calls/${pin}`);
+    await callRef.remove();
+
+    await createPeerConnection(pin);
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await callRef.child("offer").set(offer);
+    setStatus(`Hosting call. Share PIN ${pin} and wait for guest to join.`);
+
+    // Listen for answer
+    callRef.child("answer").on("value", async (snap) => {
+      const answer = snap.val();
+      if (answer && !pc.currentRemoteDescription) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        setStatus("Guest connected.");
+      }
+    });
+
+    // Listen for guest ICE
+    callRef.child("candidates/guest").on("child_added", (snap) => {
+      const candidate = snap.val();
+      if (candidate && pc) {
+        pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+  });
+
+  joinBtn.addEventListener("click", async () => {
+    const pin = pinInput.value.trim();
+    if (!/^[0-9]{4,6}$/.test(pin)) {
+      setStatus("Use a 4–6 digit numeric PIN.");
+      return;
+    }
+    isHost = false;
+    callRef = db.ref(`calls/${pin}`);
+
+    const offerSnap = await callRef.child("offer").once("value");
+    const offer = offerSnap.val();
+    if (!offer) {
+      setStatus("No host found for that PIN yet. Ask them to click Host first.");
+      return;
+    }
+
+    await createPeerConnection(pin);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await callRef.child("answer").set(answer);
+    setStatus("Connected to host.");
+
+    // Listen for host ICE
+    callRef.child("candidates/host").on("child_added", (snap) => {
+      const candidate = snap.val();
+      if (candidate && pc) {
+        pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+  });
+
+  hangupBtn.addEventListener("click", () => {
+    const pin = pinInput.value.trim();
+    cleanup(pin);
+    setStatus("Call ended.");
+  });
+}
 
 // ============================================
 // GAMES
