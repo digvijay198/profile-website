@@ -27,11 +27,6 @@ const CONFIG = {
   clientsCount: "20+",
   resumeLink: "resume.pdf",
 
-  // Video message: Formspree form ID so visitors can send the recorded video to you by email.
-  // 1. Create a form at https://formspree.io and get the form ID from the URL (e.g. formspree.io/f/abcxyz → abcxyz).
-  // 2. In Formspree dashboard, open your form → Settings and ensure file uploads are allowed (max 10 MB on free plan).
-  videoMessageFormspreeId: "xaqdvqba",
-
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
       // Greetings & intro
@@ -170,10 +165,10 @@ function initializeAll() {
   initializeSkillBars();
   initializeStatsCounter();
   initializeWeatherWidget();
+  initializeLatestNews();
   initializeChatbot();
   initializeCallFeature();
   initializeContactForm();
-  initializeVideoMessage();
   initializeGames();
   createLucideIcons();
 }
@@ -602,6 +597,143 @@ function showWeatherError(message) {
   loadingEl.style.display = "block";
   loadingEl.style.color = "#ef4444";
   loadingEl.textContent = message;
+}
+
+// ============================================
+// LATEST TECH NEWS (client-side fetch)
+// ============================================
+
+function formatRelativeTime(isoOrEpoch) {
+  const ts = typeof isoOrEpoch === "number" ? isoOrEpoch : Date.parse(isoOrEpoch);
+  if (!Number.isFinite(ts)) return "";
+  const diffMs = Date.now() - ts;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+async function fetchWithTimeout(url, { timeoutMs = 9000 } = {}) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function setNewsStatus(text, isError = false) {
+  const el = document.getElementById("newsStatus");
+  if (!el) return;
+  el.style.color = isError ? "#ef4444" : "";
+  const span = el.querySelector("span");
+  if (span) span.textContent = text;
+}
+
+function renderNews(items) {
+  const grid = document.getElementById("newsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (!items || !items.length) {
+    grid.innerHTML = `<div class="tool-card" style="grid-column: 1 / -1; text-align:center;">No stories available right now.</div>`;
+    return;
+  }
+
+  for (const item of items) {
+    const title = item.title || "Untitled";
+    const url = item.url || item.story_url || "#";
+    const source = item.source || (item.url ? new URL(item.url).hostname.replace(/^www\./, "") : "Hacker News");
+    const created = item.created_at || item.createdAt || item.created_at_i * 1000;
+    const timeLabel = formatRelativeTime(created);
+    const points = typeof item.points === "number" ? item.points : null;
+    const comments = typeof item.num_comments === "number" ? item.num_comments : null;
+
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.innerHTML = `
+      <div class="news-card-title">
+        <a href="${url}" target="_blank" rel="noopener">${title}</a>
+      </div>
+      <div class="news-meta">
+        <div class="news-meta-item">
+          <i data-lucide="clock" aria-hidden="true"></i>
+          <span>${timeLabel}</span>
+        </div>
+        ${points != null ? `
+          <div class="news-meta-item">
+            <i data-lucide="zap" aria-hidden="true"></i>
+            <span>${points} points</span>
+          </div>` : ""}
+        ${comments != null ? `
+          <div class="news-meta-item">
+            <i data-lucide="messages-square" aria-hidden="true"></i>
+            <span>${comments} comments</span>
+          </div>` : ""}
+        <div class="news-source">
+          <i data-lucide="link" aria-hidden="true"></i>
+          <span>${source}</span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  createLucideIcons();
+}
+
+async function loadLatestNews() {
+  // Using HN Algolia API (no key required). If CORS blocks, we show a friendly fallback.
+  const url = "https://hn.algolia.com/api/v1/search_by_date?tags=story&query=technology&hitsPerPage=9";
+  setNewsStatus("Loading latest stories…");
+
+  try {
+    const res = await fetchWithTimeout(url, { timeoutMs: 9000 });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const hits = Array.isArray(data?.hits) ? data.hits : [];
+
+    // Prefer stories that link out (have a URL) and have a title.
+    const items = hits
+      .filter((h) => h && (h.url || h.story_url) && h.title)
+      .slice(0, 6)
+      .map((h) => ({
+        title: h.title,
+        url: h.url || h.story_url,
+        created_at: h.created_at,
+        points: h.points,
+        num_comments: h.num_comments
+      }));
+
+    renderNews(items);
+    setNewsStatus(`Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
+  } catch (err) {
+    console.error("News fetch error:", err);
+    setNewsStatus("Couldn’t load live news (network/CORS). Showing helpful links instead.", true);
+    renderNews([
+      { title: "Hacker News (Top)", url: "https://news.ycombinator.com/", createdAt: Date.now(), source: "news.ycombinator.com" },
+      { title: "The Verge (Tech)", url: "https://www.theverge.com/tech", createdAt: Date.now(), source: "theverge.com" },
+      { title: "TechCrunch", url: "https://techcrunch.com/", createdAt: Date.now(), source: "techcrunch.com" },
+      { title: "Ars Technica", url: "https://arstechnica.com/", createdAt: Date.now(), source: "arstechnica.com" }
+    ]);
+  }
+}
+
+function initializeLatestNews() {
+  const grid = document.getElementById("newsGrid");
+  const refreshBtn = document.getElementById("newsRefresh");
+  if (!grid || !refreshBtn) return;
+
+  refreshBtn.addEventListener("click", () => {
+    loadLatestNews();
+  });
+
+  loadLatestNews();
 }
 
 // ============================================
@@ -1306,257 +1438,6 @@ function showFormMessage(message, type) {
 
   document.getElementById("contactForm")?.appendChild(div);
   setTimeout(() => div.remove(), 5000);
-}
-
-// ============================================
-// VIDEO MESSAGE (record and send)
-// ============================================
-
-function initializeVideoMessage() {
-  const liveVideo = document.getElementById("videoMessageLive");
-  const playbackVideo = document.getElementById("videoMessagePlayback");
-  const placeholder = document.getElementById("videoMessagePlaceholder");
-  const errorEl = document.getElementById("videoMessageError");
-  const statusEl = document.getElementById("videoMessageStatus");
-  const startBtn = document.getElementById("videoMessageStart");
-  const recordBtn = document.getElementById("videoMessageRecord");
-  const stopBtn = document.getElementById("videoMessageStop");
-  const rerecordBtn = document.getElementById("videoMessageRerecord");
-  const downloadLink = document.getElementById("videoMessageDownload");
-  const sendBtn = document.getElementById("videoMessageSend");
-  const senderNameInput = document.getElementById("videoMessageSenderName");
-  const senderEmailInput = document.getElementById("videoMessageSenderEmail");
-
-  if (!liveVideo || !playbackVideo || !startBtn || !recordBtn || !stopBtn) return;
-
-  let stream = null;
-  let mediaRecorder = null;
-  let recordedChunks = [];
-  let recordedBlob = null;
-  const MAX_RECORDING_SEC = 45;
-  let recordingTimerId = null;
-
-  function showError(msg) {
-    if (!errorEl) return;
-    errorEl.textContent = msg;
-    errorEl.style.display = "flex";
-    if (placeholder) placeholder.style.display = "none";
-  }
-
-  function hideError() {
-    if (errorEl) {
-      errorEl.style.display = "none";
-    }
-    if (placeholder) placeholder.style.display = "flex";
-  }
-
-  function showStatus(msg, type) {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.style.display = "block";
-    statusEl.className = "video-message-status " + (type === "success" ? "success" : type === "error" ? "error" : "");
-  }
-
-  function hideStatus() {
-    if (statusEl) statusEl.style.display = "none";
-  }
-
-  function stopCamera() {
-    if (stream) {
-      stream.getTracks().forEach((t) => t.stop());
-      stream = null;
-    }
-    if (liveVideo.srcObject) {
-      liveVideo.srcObject = null;
-    }
-    if (placeholder) placeholder.style.display = "flex";
-    liveVideo.style.display = "none";
-  }
-
-  startBtn.addEventListener("click", async () => {
-    hideError();
-    hideStatus();
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      liveVideo.srcObject = stream;
-      liveVideo.style.display = "block";
-      if (placeholder) placeholder.style.display = "none";
-      startBtn.style.display = "none";
-      recordBtn.style.display = "inline-block";
-    } catch (err) {
-      console.error(err);
-      showError("Could not access camera or microphone. Please allow access and try again.");
-    }
-  });
-
-  const timerEl = document.getElementById("videoMessageTimer");
-  function startRecordingTimer() {
-    let sec = 0;
-    if (timerEl) {
-      timerEl.style.display = "block";
-      timerEl.textContent = "Recording: 0:00";
-    }
-    recordingTimerId = setInterval(() => {
-      sec += 1;
-      if (timerEl) timerEl.textContent = "Recording: " + Math.floor(sec / 60) + ":" + (sec < 10 ? "0" : "") + sec;
-      if (sec >= MAX_RECORDING_SEC && mediaRecorder && mediaRecorder.state !== "inactive") {
-        clearInterval(recordingTimerId);
-        recordingTimerId = null;
-        if (timerEl) timerEl.style.display = "none";
-        mediaRecorder.stop();
-      }
-    }, 1000);
-  }
-  function stopRecordingTimer() {
-    if (recordingTimerId) {
-      clearInterval(recordingTimerId);
-      recordingTimerId = null;
-    }
-    if (timerEl) timerEl.style.display = "none";
-  }
-
-  recordBtn.addEventListener("click", () => {
-    if (!stream) return;
-    hideStatus();
-    recordedChunks = [];
-    const options = { mimeType: "video/webm;codecs=vp9,opus" };
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options.mimeType = "video/webm";
-    }
-    mediaRecorder = new MediaRecorder(stream, options);
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
-    };
-    mediaRecorder.onstop = () => {
-      stopRecordingTimer();
-      recordedBlob = new Blob(recordedChunks, { type: options.mimeType });
-      const url = URL.createObjectURL(recordedBlob);
-      playbackVideo.src = url;
-      playbackVideo.style.display = "block";
-      liveVideo.style.display = "none";
-      if (placeholder) placeholder.style.display = "none";
-      recordBtn.style.display = "none";
-      stopBtn.style.display = "none";
-      rerecordBtn.style.display = "inline-block";
-      if (downloadLink) {
-        downloadLink.style.display = "inline-block";
-        downloadLink.href = url;
-        downloadLink.download = `video-message-${Date.now()}.webm`;
-      }
-      if (sendBtn) sendBtn.style.display = "inline-block";
-    };
-    mediaRecorder.start();
-    recordBtn.style.display = "none";
-    stopBtn.style.display = "inline-block";
-    startRecordingTimer();
-  });
-
-  stopBtn.addEventListener("click", () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-  });
-
-  if (sendBtn) {
-    sendBtn.addEventListener("click", async () => {
-      if (!recordedBlob) return;
-      const formId = (CONFIG.videoMessageFormspreeId || "").trim();
-      if (!formId) {
-        showStatus(
-          "Video sending is not set up yet. The profile owner can add a Formspree form ID in script.js (see CONFIG.videoMessageFormspreeId). Until then, please download the video and email it to " + (CONFIG.userEmail || "the owner") + ".",
-          "error"
-        );
-        return;
-      }
-      sendBtn.disabled = true;
-      showStatus("Uploading video, then sending link to owner...", "");
-      const fallbackMsg = "Please download the video and email it to " + (CONFIG.userEmail || "the owner") + ".";
-      try {
-        // Step 1: Upload video to temporary host (no file sent to Formspree – avoids "video upload not permitted")
-        const uploadForm = new FormData();
-        uploadForm.append("file", recordedBlob, `video-message-${Date.now()}.webm`);
-        let videoUrl = null;
-        const uploadRes = await fetch("https://0x0.st", {
-          method: "POST",
-          body: uploadForm
-        });
-        if (uploadRes.ok) {
-          const text = await uploadRes.text();
-          if (text && text.startsWith("http")) {
-            videoUrl = text.trim();
-          }
-        }
-        if (!videoUrl) {
-          // Fallback: try Litterbox (catbox.moe) temporary upload
-          const lbForm = new FormData();
-          lbForm.append("reqtype", "fileupload");
-          lbForm.append("time", "24h");
-          lbForm.append("fileToUpload", recordedBlob, `video-message-${Date.now()}.webm`);
-          const lbRes = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", { method: "POST", body: lbForm });
-          if (lbRes.ok) {
-            const lbData = await lbRes.json().catch(() => ({}));
-            if (lbData && lbData.url) videoUrl = lbData.url;
-          }
-        }
-        if (!videoUrl) {
-          showStatus("Could not upload video (temporary host unavailable). " + fallbackMsg, "error");
-          sendBtn.disabled = false;
-          return;
-        }
-        // Step 2: Send only text to Formspree (link + sender info) – no file attachment
-        showStatus("Sending link to profile owner...", "");
-        const formData = new FormData();
-        formData.append("_subject", "Video message from portfolio");
-        formData.append("message", "A visitor sent you a video message.\n\nDownload it here (link may expire after some time): " + videoUrl);
-        if (senderNameInput && senderNameInput.value.trim()) {
-          formData.append("name", senderNameInput.value.trim());
-        }
-        if (senderEmailInput && senderEmailInput.value.trim()) {
-          formData.append("email", senderEmailInput.value.trim());
-          formData.append("_replyto", senderEmailInput.value.trim());
-        }
-        const res = await fetch("https://formspree.io/f/" + formId, {
-          method: "POST",
-          body: formData,
-          headers: { Accept: "application/json" }
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && (data.ok === true || res.status === 200)) {
-          showStatus("Your video has been sent. The profile owner will receive an email with a link to watch or download it.", "success");
-        } else {
-          let errMsg = data.error || (data.errors && Array.isArray(data.errors) && data.errors[0] && data.errors[0].message) || "Failed to send. " + fallbackMsg;
-          showStatus(errMsg, "error");
-          console.error("Formspree send failed:", res.status, data);
-        }
-      } catch (err) {
-        console.error("Video send error:", err);
-        showStatus("Network error. " + fallbackMsg, "error");
-      }
-      sendBtn.disabled = false;
-    });
-  }
-
-  rerecordBtn.addEventListener("click", () => {
-    hideStatus();
-    if (playbackVideo.src) {
-      URL.revokeObjectURL(playbackVideo.src);
-      playbackVideo.removeAttribute("src");
-      playbackVideo.load();
-    }
-    playbackVideo.style.display = "none";
-    rerecordBtn.style.display = "none";
-    if (downloadLink) downloadLink.style.display = "none";
-    if (sendBtn) sendBtn.style.display = "none";
-    if (stream) {
-      liveVideo.srcObject = stream;
-      liveVideo.style.display = "block";
-    }
-    if (placeholder) placeholder.style.display = stream ? "none" : "flex";
-    recordBtn.style.display = "inline-block";
-    recordedBlob = null;
-  });
-
-  window.addEventListener("beforeunload", stopCamera);
 }
 
 // ============================================

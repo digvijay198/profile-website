@@ -50,6 +50,7 @@
                 <li><a href="#projects" class="nav-link">Projects</a></li>
                 <li><a href="#video" class="nav-link">Video</a></li>
                 <li><a href="#games" class="nav-link">Games</a></li>
+                <li><a href="#news" class="nav-link">News</a></li>
                 <li><a href="#contact" class="nav-link">Contact</a></li>
             </ul>
         </div>
@@ -371,6 +372,27 @@
         </div>
     </section>
 
+    <!-- Latest News Section -->
+    <section id="news" class="section news-section">
+        <div class="container">
+            <h2 class="section-title">Latest Tech News</h2>
+            <p class="news-subtitle">
+                Fresh headlines from the tech world, updated automatically.
+            </p>
+            <div class="news-toolbar">
+                <div class="news-status" id="newsStatus">
+                    <i data-lucide="newspaper" class="w-5 h-5" aria-hidden="true"></i>
+                    <span>Loading latest stories…</span>
+                </div>
+                <button class="btn btn-secondary news-refresh" id="newsRefresh" type="button">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i>
+                    Refresh
+                </button>
+            </div>
+            <div class="news-grid" id="newsGrid" aria-live="polite"></div>
+        </div>
+    </section>
+
     <!-- Contact Section -->
     <section id="contact" class="section contact-section">
         <div class="container">
@@ -406,38 +428,6 @@
                         <textarea placeholder="Your Message" rows="5" required></textarea>
                         <button type="submit" class="btn btn-primary">Send Message</button>
                     </form>
-                </div>
-            </div>
-
-            <!-- Record Video Message -->
-            <div class="video-message-section">
-                <h3 class="video-message-title">Record a video message</h3>
-                <p class="video-message-desc">Record a short video and send it directly to the profile owner.</p>
-                <div class="video-message-box">
-                    <div class="video-message-sender-fields">
-                        <input type="text" id="videoMessageSenderName" class="video-message-input" placeholder="Your name (optional)">
-                        <input type="email" id="videoMessageSenderEmail" class="video-message-input" placeholder="Your email (optional)">
-                    </div>
-                    <div class="video-message-preview-wrap">
-                        <video id="videoMessageLive" class="video-message-video" playsinline muted autoplay></video>
-                        <video id="videoMessagePlayback" class="video-message-video" playsinline controls style="display: none;"></video>
-                        <div id="videoMessagePlaceholder" class="video-message-placeholder">
-                            <span class="video-message-placeholder-icon"><i data-lucide="video" class="w-12 h-12" aria-hidden="true"></i></span>
-                            <span>Camera preview will appear here</span>
-                        </div>
-                        <div id="videoMessageError" class="video-message-error" style="display: none;"></div>
-                    </div>
-                    <div class="video-message-controls">
-                        <button type="button" id="videoMessageStart" class="btn btn-primary video-message-btn">Start camera</button>
-                        <button type="button" id="videoMessageRecord" class="btn btn-primary video-message-btn" style="display: none;">Record</button>
-                        <button type="button" id="videoMessageStop" class="btn video-message-btn video-message-btn-stop" style="display: none;">Stop</button>
-                        <button type="button" id="videoMessageRerecord" class="btn btn-secondary video-message-btn" style="display: none;">Record again</button>
-                        <a id="videoMessageDownload" class="btn btn-secondary video-message-btn" style="display: none;" download="video-message.webm">Download</a>
-                        <button type="button" id="videoMessageSend" class="btn btn-primary video-message-btn" style="display: none;">Send to owner</button>
-                    </div>
-                    <p id="videoMessageTimer" class="video-message-timer" style="display: none;">Recording: 0:00</p>
-                    <p id="videoMessageStatus" class="video-message-status" style="display: none;"></p>
-                    <p class="video-message-hint">Keep your video under 1 minute so it can be sent by email. Then click "Send to owner" or download a copy.</p>
                 </div>
             </div>
         </div>
