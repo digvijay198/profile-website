@@ -867,6 +867,86 @@ function getChatbotResponse(userText) {
   return CONFIG.knowledgeBase["default"];
 }
 
+function generateFourDigitPin() {
+  // 1000–9999 inclusive
+  const min = 1000;
+  const max = 9999;
+  try {
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      const arr = new Uint32Array(1);
+      window.crypto.getRandomValues(arr);
+      return String(min + (arr[0] % (max - min + 1)));
+    }
+  } catch (_) {}
+  return String(Math.floor(min + Math.random() * (max - min + 1)));
+}
+
+function buildChatbotCallMessage(pin) {
+  const safePin = String(pin).replace(/[^0-9]/g, "").slice(0, 4);
+  return `
+    <div class="chatbot-call-card">
+      <div>To start a private video call with Digvijay, use this <b>4-digit PIN</b>:</div>
+      <div class="chatbot-pin-row">
+        <div class="chatbot-pin">${safePin}</div>
+        <button class="btn btn-secondary" onclick="chatbotCopyPin('${safePin}')">Copy</button>
+      </div>
+      <div class="chatbot-call-actions">
+        <button class="btn btn-primary" onclick="chatbotGoToCall('${safePin}')">Open call & prefill PIN</button>
+        <button class="btn btn-secondary" onclick="chatbotJoinCall('${safePin}')">I’m the caller (Join)</button>
+        <button class="btn btn-secondary" onclick="chatbotHostCall('${safePin}')">I’m Digvijay (Host)</button>
+      </div>
+      <div style="opacity:0.9;">
+        Tip: Send this PIN to Digvijay. He opens the site, enters the same PIN, clicks <b>Host</b>. You click <b>Join</b>.
+      </div>
+    </div>
+  `;
+}
+
+function chatbotGoToCall(pin) {
+  const callPin = document.getElementById("callPin");
+  if (callPin) callPin.value = String(pin);
+  if (typeof window.scrollToSection === "function") window.scrollToSection("call");
+}
+window.chatbotGoToCall = chatbotGoToCall;
+
+function chatbotClickCallButton(btnId) {
+  const btn = document.getElementById(btnId);
+  if (btn) btn.click();
+}
+
+function chatbotJoinCall(pin) {
+  chatbotGoToCall(pin);
+  // Wait a tick so scroll/prefill completes
+  setTimeout(() => chatbotClickCallButton("callJoin"), 200);
+}
+window.chatbotJoinCall = chatbotJoinCall;
+
+function chatbotHostCall(pin) {
+  chatbotGoToCall(pin);
+  setTimeout(() => chatbotClickCallButton("callCreate"), 200);
+}
+window.chatbotHostCall = chatbotHostCall;
+
+async function chatbotCopyPin(pin) {
+  const p = String(pin);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(p);
+      addMessageToChat("PIN copied to clipboard.", "bot-message");
+      return;
+    }
+  } catch (_) {}
+  addMessageToChat(`Copy this PIN: <b>${p}</b>`, "bot-message");
+}
+window.chatbotCopyPin = chatbotCopyPin;
+
+function chatbotQuickCall() {
+  const pin = generateFourDigitPin();
+  window._chatbotLastCallPin = pin;
+  addMessageToChat(buildChatbotCallMessage(pin), "bot-message");
+}
+window.chatbotQuickCall = chatbotQuickCall;
+
 function sendChatMessage() {
   const input = document.getElementById("chatbotInput");
   const messagesContainer = document.getElementById("chatbotMessages");
@@ -903,6 +983,9 @@ function addMessageToChat(text, className) {
 
   // Auto-scroll to bottom
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  // If icons appear inside chat bubbles, render them
+  if (typeof createLucideIcons === "function") createLucideIcons();
 }
 
 // Chatbot control: colors + music
@@ -910,6 +993,16 @@ function handleChatbotControl(lowerText, originalText) {
   // #region agent log
   debugLogControl("H0", "chatbot_command_received", { lowerText, originalText, hasPlayMusic: typeof window.playBackgroundMusic === "function", hasPauseMusic: typeof window.pauseBackgroundMusic === "function" });
   // #endregion
+
+  // Call intent: generate a 4-digit PIN and guide user
+  const wantsCall =
+    /\b(connect|call|video call|videocall|join call|start call|call digivijay|connect me)\b/i.test(lowerText) &&
+    /\b(digivijay|owner|you)\b/i.test(lowerText);
+  if (wantsCall) {
+    const pin = generateFourDigitPin();
+    window._chatbotLastCallPin = pin;
+    return { botResponseOverride: buildChatbotCallMessage(pin) };
+  }
 
   // Color control - more flexible matching with typo tolerance
   const colorMap = {

@@ -496,6 +496,9 @@
             </div>
             <div class="chatbot-input-container">
                 <input type="text" id="chatbotInput" placeholder="Type or use mic..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button type="button" id="chatbotCall" class="chatbot-call" title="Start a call" onclick="chatbotQuickCall()" aria-label="Start a call">
+                    <i data-lucide="phone-call" class="w-5 h-5" aria-hidden="true"></i>
+                </button>
                 <button type="button" id="chatbotMic" class="chatbot-mic" title="Voice input" onclick="toggleVoiceInput()" aria-label="Voice input">
                     <i data-lucide="mic" class="mic-icon w-5 h-5" aria-hidden="true"></i>
                 </button>
