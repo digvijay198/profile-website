@@ -27,6 +27,16 @@ const CONFIG = {
   clientsCount: "20+",
   resumeLink: "resume.pdf",
 
+  // Gemini agent: Vercel serverless route (see /api/agent.js). On Vercel, set GEMINI_API_KEY in Project Settings.
+  // Use same-origin path when deployed; override with a full URL only if the API is hosted elsewhere.
+  agentEndpoint: "/api/agent",
+
+  // Anam AI — talking avatar (https://lab.anam.ai). Create a persona, add bio/resume to Knowledge + system prompt, Publish.
+  // Lab → Widget: copy Persona ID, add your domain under Allowed domains. Leave empty to hide the widget.
+  anamPersonaId: "fa39aabd-ad5c-438f-b094-62bb8d818674",
+  // Optional label shown in the widget UI (defaults to first name from userName)
+  anamAgentName: "",
+
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
       // Greetings & intro
@@ -167,6 +177,8 @@ function initializeAll() {
   initializeWeatherWidget();
   initializeLatestNews();
   initializeChatbot();
+  initializeAgentPanel();
+  initializeAnamWidget();
   initializeCallFeature();
   initializeContactForm();
   initializeGames();
@@ -177,6 +189,40 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeAll);
 } else {
   initializeAll();
+}
+
+/**
+ * Anam AI avatar widget (@anam-ai/agent-widget). One instance per page (Anam requirement).
+ * Configure persona + knowledge in Lab; domain must be allowlisted for production.
+ */
+function initializeAnamWidget() {
+  const raw = CONFIG.anamPersonaId;
+  const id = typeof raw === "string" ? raw.trim() : "";
+  if (!id) return;
+  if (window.__anamWidgetInit) return;
+  window.__anamWidgetInit = true;
+
+  const mount = document.createElement("div");
+  mount.id = "anamWidgetMount";
+  document.body.appendChild(mount);
+
+  const agent = document.createElement("anam-agent");
+  agent.setAttribute("agent-id", id);
+  agent.setAttribute("layout", "floating");
+  agent.setAttribute("position", "bottom-left");
+  agent.setAttribute("initial-state", "minimized");
+  agent.setAttribute("ui-text-input", "true");
+  const first = (CONFIG.userName || "me").split(/\s+/)[0] || "me";
+  agent.setAttribute("call-to-action", `Ask ${first}'s AI`);
+  const displayName = typeof CONFIG.anamAgentName === "string" ? CONFIG.anamAgentName.trim() : "";
+  if (displayName) agent.setAttribute("agent-name", displayName);
+
+  mount.appendChild(agent);
+
+  const script = document.createElement("script");
+  script.src = "https://unpkg.com/@anam-ai/agent-widget";
+  script.async = true;
+  document.body.appendChild(script);
 }
 
 // ============================================
@@ -724,6 +770,9 @@ async function loadLatestNews() {
   }
 }
 
+// Expose for Gemini agent tool dispatcher
+window.refreshLatestNews = loadLatestNews;
+
 function initializeLatestNews() {
   const grid = document.getElementById("newsGrid");
   const refreshBtn = document.getElementById("newsRefresh");
@@ -1079,6 +1128,268 @@ function chatbotQuickCall() {
 }
 window.chatbotQuickCall = chatbotQuickCall;
 
+/**
+ * @param {string | Array<{role:string, content:string}>} messagesOrUserText
+ */
+async function callGeminiAgent(messagesOrUserText) {
+  if (!CONFIG.agentEndpoint) {
+    throw new Error("Agent endpoint not configured (CONFIG.agentEndpoint is empty).");
+  }
+
+  const messages = Array.isArray(messagesOrUserText)
+    ? messagesOrUserText
+    : [{ role: "user", content: String(messagesOrUserText) }];
+
+  const res = await fetch(CONFIG.agentEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages })
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Agent request failed: HTTP ${res.status} ${text}`);
+  }
+
+  return res.json();
+}
+
+function setAgentLoading(isLoading) {
+  const container = document.getElementById("agentMessages");
+  if (!container) return;
+  let row = document.getElementById("agentLoadingRow");
+  if (isLoading) {
+    if (!row) {
+      row = document.createElement("div");
+      row.id = "agentLoadingRow";
+      row.className = "agent-panel-loading";
+      row.textContent = "Thinking…";
+      container.appendChild(row);
+    }
+    container.scrollTop = container.scrollHeight;
+  } else if (row) {
+    row.remove();
+  }
+  const sendBtn = document.getElementById("agentSend");
+  const input = document.getElementById("agentInput");
+  if (sendBtn) sendBtn.disabled = !!isLoading;
+  if (input) input.disabled = !!isLoading;
+}
+
+function appendAgentUserMessage(text) {
+  const container = document.getElementById("agentMessages");
+  if (!container) return;
+  const row = document.createElement("div");
+  row.className = "agent-msg agent-msg-user";
+  const avatar = document.createElement("div");
+  avatar.className = "agent-msg-avatar";
+  avatar.innerHTML = '<i data-lucide="user" class="w-4 h-4" aria-hidden="true"></i>';
+  const bubble = document.createElement("div");
+  bubble.className = "agent-msg-bubble";
+  bubble.textContent = text;
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+  if (typeof createLucideIcons === "function") createLucideIcons();
+}
+
+function appendAgentAssistantMessage(html) {
+  const container = document.getElementById("agentMessages");
+  if (!container) return;
+  const row = document.createElement("div");
+  row.className = "agent-msg agent-msg-assistant";
+  const avatar = document.createElement("div");
+  avatar.className = "agent-msg-avatar";
+  avatar.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4" aria-hidden="true"></i>';
+  const bubble = document.createElement("div");
+  bubble.className = "agent-msg-bubble";
+  bubble.innerHTML = html;
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+  if (typeof createLucideIcons === "function") createLucideIcons();
+}
+
+function toggleAgentPanel() {
+  const panel = document.getElementById("agentPanel");
+  if (!panel) return;
+  const open = !panel.classList.contains("active");
+  panel.classList.toggle("active", open);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  if (open) {
+    setTimeout(() => document.getElementById("agentInput")?.focus(), 100);
+    if (typeof createLucideIcons === "function") createLucideIcons();
+  }
+}
+window.toggleAgentPanel = toggleAgentPanel;
+
+function closeAgentPanel() {
+  const panel = document.getElementById("agentPanel");
+  if (!panel) return;
+  panel.classList.remove("active");
+  panel.setAttribute("aria-hidden", "true");
+}
+window.closeAgentPanel = closeAgentPanel;
+
+function initializeAgentPanel() {
+  const input = document.getElementById("agentInput");
+  if (!input) return;
+  if (!window._agentChatHistory) window._agentChatHistory = [];
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendAgentMessage();
+    }
+  });
+}
+
+async function sendAgentMessage() {
+  const input = document.getElementById("agentInput");
+  if (!input || input.disabled) return;
+
+  const userText = input.value.trim();
+  if (!userText) return;
+
+  if (!CONFIG.agentEndpoint) {
+    appendAgentAssistantMessage(
+      "<p>Agent is not configured. Set <code>CONFIG.agentEndpoint</code> in <code>script.js</code> and deploy <code>/api/agent</code> on Vercel with <code>GEMINI_API_KEY</code>.</p>"
+    );
+    return;
+  }
+
+  appendAgentUserMessage(userText);
+  input.value = "";
+
+  window._agentChatHistory.push({ role: "user", content: userText });
+  const payload = window._agentChatHistory.slice(-10);
+
+  setAgentLoading(true);
+
+  try {
+    const data = await callGeminiAgent(payload);
+    const assistantText = data?.assistantText || "";
+    const toolCalls = data?.toolCalls || [];
+
+    const toolResult = await dispatchAgentToolCalls(toolCalls);
+    let finalHtml = assistantText || (toolCalls.length ? "<p>Done — I ran the requested actions.</p>" : "<p>Okay.</p>");
+
+    if (toolResult?.pin) {
+      finalHtml += `<p style="margin-top:0.5rem;opacity:0.95;">PIN: <strong>${toolResult.pin}</strong></p>`;
+    }
+
+    appendAgentAssistantMessage(finalHtml);
+    window._agentChatHistory.push({ role: "assistant", content: assistantText || finalHtml.replace(/<[^>]+>/g, " ").trim() });
+  } catch (err) {
+    console.error("Agent panel error:", err);
+    appendAgentAssistantMessage(
+      `<p>Something went wrong: ${String(err?.message || err)}</p><p style="margin-top:0.5rem;opacity:0.9;">Check Vercel env <code>GEMINI_API_KEY</code> and redeploy.</p>`
+    );
+  } finally {
+    setAgentLoading(false);
+  }
+}
+window.sendAgentMessage = sendAgentMessage;
+
+async function dispatchAgentTool(toolName, toolInput) {
+  const input = toolInput && typeof toolInput === "object" ? toolInput : {};
+  const safeClick = (id) => document.getElementById(id)?.click();
+
+  switch (toolName) {
+    case "scrollToSection": {
+      const id = input.id || input.sectionId;
+      if (id && typeof window.scrollToSection === "function") window.scrollToSection(String(id));
+      break;
+    }
+    case "setThemeColor": {
+      if (input.color && typeof window.setThemeColor === "function") window.setThemeColor(String(input.color));
+      break;
+    }
+    case "playMusic": {
+      if (typeof window.playBackgroundMusic === "function") window.playBackgroundMusic();
+      break;
+    }
+    case "pauseMusic": {
+      if (typeof window.pauseBackgroundMusic === "function") window.pauseBackgroundMusic();
+      break;
+    }
+    case "refreshLatestNews": {
+      if (typeof window.refreshLatestNews === "function") window.refreshLatestNews();
+      break;
+    }
+    case "startCall": {
+      const role = input.role === "host" ? "host" : "join";
+      const pin = input.pin ? String(input.pin).replace(/[^0-9]/g, "").slice(0, 4) : generateFourDigitPin();
+
+      window._chatbotLastCallPin = pin;
+      if (role === "host") chatbotHostCall(pin);
+      else chatbotJoinCall(pin);
+
+      return { pin };
+    }
+    case "ticTacToeReset": {
+      safeClick("ticTacToeReset");
+      break;
+    }
+    case "snakeStart": {
+      safeClick("snakeStart");
+      break;
+    }
+    case "snakeStop": {
+      safeClick("snakeStop");
+      break;
+    }
+    case "snakeReset": {
+      safeClick("snakeReset");
+      break;
+    }
+    case "fillContactForm": {
+      const form = document.getElementById("contactForm");
+      if (!form) break;
+
+      const textInput = form.querySelector('input[type="text"]');
+      const emailInput = form.querySelector('input[type="email"]');
+      const textarea = form.querySelector("textarea");
+
+      if (textInput && input.name) textInput.value = String(input.name);
+      if (emailInput && input.email) emailInput.value = String(input.email);
+      if (textarea && input.message) textarea.value = String(input.message);
+      break;
+    }
+    case "submitContactForm": {
+      const form = document.getElementById("contactForm");
+      if (!form) break;
+
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      break;
+    }
+    default:
+      break;
+  }
+
+  return null;
+}
+
+async function dispatchAgentToolCalls(toolCalls) {
+  let pinFromCall = null;
+  const calls = Array.isArray(toolCalls) ? toolCalls : [];
+
+  for (const call of calls) {
+    if (!call || typeof call !== "object") continue;
+    const name = call.name;
+    const input = call.input || {};
+    if (!name) continue;
+
+    const result = await dispatchAgentTool(name, input);
+    if (result && result.pin) pinFromCall = result.pin;
+  }
+
+  return { pin: pinFromCall };
+}
+
 function sendChatMessage() {
   const input = document.getElementById("chatbotInput");
   const messagesContainer = document.getElementById("chatbotMessages");
@@ -1090,17 +1401,41 @@ function sendChatMessage() {
   addMessageToChat(userText, "user-message");
   input.value = "";
 
-  const lowerText = userText.toLowerCase().trim();
-  let botResponse = getChatbotResponse(userText);
+  // Agent mode: if CONFIG.agentEndpoint is set, use Gemini tool calling.
+  if (CONFIG.agentEndpoint) {
+    callGeminiAgent(userText)
+      .then(async (data) => {
+        const assistantText = data?.assistantText || "";
+        const toolCalls = data?.toolCalls || [];
 
-  const controlResult = handleChatbotControl(lowerText, userText);
-  if (controlResult?.botResponseOverride) {
-    botResponse = controlResult.botResponseOverride;
+        const toolResult = await dispatchAgentToolCalls(toolCalls);
+        let finalText = assistantText || (toolCalls.length ? "Done. I triggered the requested actions." : "Okay.");
+
+        if (toolResult?.pin) {
+          // Helpful for "connect me to Digvijay" so the user can share it.
+          finalText += `<div style="margin-top:8px;opacity:0.95;">PIN: <b>${toolResult.pin}</b></div>`;
+        }
+
+        addMessageToChat(finalText, "bot-message");
+      })
+      .catch(async (err) => {
+        console.error("Agent mode failed, falling back:", err);
+        const lowerText = userText.toLowerCase().trim();
+        let botResponse = getChatbotResponse(userText);
+        const controlResult = handleChatbotControl(lowerText, userText);
+        if (controlResult?.botResponseOverride) botResponse = controlResult.botResponseOverride;
+        addMessageToChat(botResponse, "bot-message");
+      });
+    return;
   }
 
-  setTimeout(() => {
-    addMessageToChat(botResponse, "bot-message");
-  }, 500);
+  // Fallback mode: keep existing local knowledge base behavior.
+  const lowerText = userText.toLowerCase().trim();
+  let botResponse = getChatbotResponse(userText);
+  const controlResult = handleChatbotControl(lowerText, userText);
+  if (controlResult?.botResponseOverride) botResponse = controlResult.botResponseOverride;
+
+  addMessageToChat(botResponse, "bot-message");
 }
 window.sendChatMessage = sendChatMessage;
 

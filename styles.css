@@ -1516,6 +1516,299 @@ body.theme-night {
 }
 
 /* ============================================
+   ANAM AI AVATAR (injected when CONFIG.anamPersonaId is set)
+   ============================================ */
+
+#anamWidgetMount {
+    position: relative;
+    z-index: 999;
+}
+
+/* ============================================
+   AI AGENT (ChatGPT-style panel)
+   ============================================ */
+
+.agent-launcher-wrap {
+    position: fixed;
+    bottom: 110px;
+    right: 30px;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+}
+
+.agent-launcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem 0.65rem 0.85rem;
+    border-radius: 999px;
+    border: 2px solid rgba(45, 212, 191, 0.45);
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.95) 0%, rgba(99, 102, 241, 0.95) 100%);
+    color: #f8fafc;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(45, 212, 191, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agent-launcher:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 32px rgba(99, 102, 241, 0.45);
+}
+
+.agent-launcher-icon,
+.agent-launcher-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.agent-panel {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1002;
+    align-items: flex-end;
+    justify-content: center;
+    padding: clamp(0.5rem, 2vw, 1.25rem);
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.agent-panel.active {
+    display: flex;
+}
+
+.agent-panel-inner {
+    width: min(720px, 100%);
+    height: min(88vh, 820px);
+    max-height: calc(100vh - 2rem);
+    background: var(--dark-card);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.agent-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+}
+
+.agent-panel-title-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.agent-panel-title-icon,
+.agent-panel-title-icon svg {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--primary-color);
+}
+
+.agent-panel-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.agent-panel-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    max-width: 36rem;
+}
+
+.agent-panel-close {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    line-height: 1;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.agent-panel-close:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.agent-panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: rgba(15, 23, 42, 0.35);
+}
+
+.agent-msg {
+    display: flex;
+    gap: 0.65rem;
+    max-width: 100%;
+    align-items: flex-start;
+}
+
+.agent-msg-user {
+    flex-direction: row-reverse;
+    align-self: flex-end;
+}
+
+.agent-msg-assistant {
+    align-self: flex-start;
+}
+
+.agent-msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(99, 102, 241, 0.25);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.agent-msg-user .agent-msg-avatar {
+    background: rgba(45, 212, 191, 0.2);
+    border-color: rgba(45, 212, 191, 0.35);
+}
+
+.agent-msg-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    line-height: 1.55;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    max-width: min(100%, 560px);
+    word-break: break-word;
+}
+
+.agent-msg-user .agent-msg-bubble {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(45, 212, 191, 0.2) 100%);
+    border-color: rgba(99, 102, 241, 0.35);
+}
+
+.agent-panel-input-wrap {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.6);
+}
+
+.agent-panel-input {
+    flex: 1;
+    min-height: 48px;
+    max-height: 160px;
+    resize: vertical;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.agent-panel-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.agent-panel-send {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-1);
+    color: white;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.agent-panel-send:hover {
+    filter: brightness(1.08);
+    transform: scale(1.03);
+}
+
+.agent-panel-send:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.agent-panel-hint {
+    margin: 0;
+    padding: 0 1rem 0.85rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.agent-code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.agent-panel-loading {
+    padding: 0.5rem 0 0 2.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+@media (max-width: 520px) {
+    .agent-launcher-wrap {
+        bottom: 100px;
+        right: 16px;
+    }
+
+    .agent-panel-inner {
+        height: 92vh;
+        border-radius: 16px 16px 0 0;
+    }
+}
+
+/* ============================================
    CHATBOT
    ============================================ */
 

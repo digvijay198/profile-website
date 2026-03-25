@@ -1,0 +1,9 @@
+{
+  "name": "digvijay-profile-website",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static portfolio + Vercel serverless /api/agent (Google Gemini)",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  }
+}
