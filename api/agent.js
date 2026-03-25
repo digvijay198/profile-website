@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function: POST /api/agent
  * Set GEMINI_API_KEY (or GOOGLE_API_KEY) in Vercel → Environment Variables.
- * Optional: GEMINI_MODEL (default: gemini-2.0-flash)
+ * Optional: GEMINI_MODEL (default: gemini-1.5-flash — better free-tier quota than gemini-2.0-flash)
  */
 const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
 
@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
       "Prefer role='host' when user asks to host or says they are Digvijay. " +
       "If the user asks for information (about skills, projects, etc.), respond normally without tools.";
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -214,6 +214,18 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error("Agent endpoint error:", err);
-    res.status(500).json({ error: "Agent failed", details: String(err?.message || err) });
+    const msg = String(err?.message || err);
+    const quota =
+      /429|Too Many Requests|quota|rate limit|RESOURCE_EXHAUSTED/i.test(msg);
+    if (quota) {
+      res.status(503).json({
+        error: "Gemini quota or rate limit",
+        details:
+          "Google AI free-tier limits were hit for this model or project. Wait a minute and retry; check quota at https://ai.dev/rate-limit ; or enable billing in Google AI Studio. You can set GEMINI_MODEL to another model (e.g. gemini-1.5-flash or gemini-2.0-flash) in Vercel env.",
+        hint: msg.slice(0, 1200)
+      });
+      return;
+    }
+    res.status(500).json({ error: "Agent failed", details: msg });
   }
 };

@@ -31,9 +31,9 @@ const CONFIG = {
   // Use same-origin path when deployed; override with a full URL only if the API is hosted elsewhere.
   agentEndpoint: "/api/agent",
 
-  // Anam AI — talking avatar (https://lab.anam.ai). Create a persona, add bio/resume to Knowledge + system prompt, Publish.
-  // Lab → Widget: copy Persona ID, add your domain under Allowed domains. Leave empty to hide the widget.
-  anamPersonaId: "fa39aabd-ad5c-438f-b094-62bb8d818674",
+  // Anam AI — talking avatar (https://lab.anam.ai). Prefer ANAM_PERSONA_ID in Vercel env (see /api/site-config); or paste ID here for local static preview.
+  // Lab → Widget: allowlist your domain, Publish persona.
+  anamPersonaId: "",
   // Optional label shown in the widget UI (defaults to first name from userName)
   anamAgentName: "",
 
@@ -193,13 +193,14 @@ if (document.readyState === "loading") {
 
 /**
  * Anam AI avatar widget (@anam-ai/agent-widget). One instance per page (Anam requirement).
- * Configure persona + knowledge in Lab; domain must be allowlisted for production.
+ * Production: GET /api/anam-session mints session-token (ANAM_API_KEY + ANAM_PERSONA_ID on server).
+ * Fallback: agent-id from CONFIG or /api/site-config (Lab domain allowlist).
  */
-function initializeAnamWidget() {
-  const raw = CONFIG.anamPersonaId;
-  const id = typeof raw === "string" ? raw.trim() : "";
-  if (!id) return;
+function mountAnamWidget({ personaId, sessionToken }) {
+  const id = typeof personaId === "string" ? personaId.trim() : "";
+  const token = typeof sessionToken === "string" ? sessionToken.trim() : "";
   if (window.__anamWidgetInit) return;
+  if (!token && !id) return;
   window.__anamWidgetInit = true;
 
   const mount = document.createElement("div");
@@ -207,7 +208,11 @@ function initializeAnamWidget() {
   document.body.appendChild(mount);
 
   const agent = document.createElement("anam-agent");
-  agent.setAttribute("agent-id", id);
+  if (token) {
+    agent.setAttribute("session-token", token);
+  } else {
+    agent.setAttribute("agent-id", id);
+  }
   agent.setAttribute("layout", "floating");
   agent.setAttribute("position", "bottom-left");
   agent.setAttribute("initial-state", "minimized");
@@ -223,6 +228,35 @@ function initializeAnamWidget() {
   script.src = "https://unpkg.com/@anam-ai/agent-widget";
   script.async = true;
   document.body.appendChild(script);
+}
+
+async function initializeAnamWidget() {
+  try {
+    const sessionRes = await fetch("/api/anam-session");
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+      if (sessionData && sessionData.sessionToken) {
+        mountAnamWidget({ sessionToken: sessionData.sessionToken });
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("Anam: /api/anam-session unavailable.", e);
+  }
+
+  let id = typeof CONFIG.anamPersonaId === "string" ? CONFIG.anamPersonaId.trim() : "";
+  if (!id) {
+    try {
+      const res = await fetch("/api/site-config");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.anamPersonaId) id = String(data.anamPersonaId).trim();
+      }
+    } catch (e) {
+      console.warn("Anam: /api/site-config unavailable (use CONFIG.anamPersonaId or deploy with ANAM_PERSONA_ID).", e);
+    }
+  }
+  mountAnamWidget({ personaId: id });
 }
 
 // ============================================
