@@ -108,13 +108,12 @@ This is **Digvijay Simkhada’s personal portfolio site**: a single-page style l
 
 ### Floating assistants (may or may not all be visible)
 
-- **Chat Assistant** (bottom-right bubble): Answers questions **about Digvijay** using a built-in knowledge base; on the deployed site it may also use a **Gemini** backend when configured. Supports text, optional voice input, and a quick **call** shortcut related to the video section.
-- **Agent** (pill button, above the chat on the right): A **site agent** that can perform **actions** when the backend is configured — for example: jump to a section, change theme colors, play/pause background music, refresh news, open games, help with the contact form, or start the PIN call flow. It is **not** the same as the talking avatar; it’s for controlling the page.
-- **Anam AI avatar** (if enabled in site settings): A **separate** conversational **video avatar** (third-party embed). It uses **knowledge you upload in Anam Lab** (including documents like this file). Position is typically bottom-left so it doesn’t cover the chat controls.
+- **Chat Assistant** (bottom-right bubble): Answers questions **about Digvijay** using a built-in knowledge base. Supports text, optional voice input, and a quick **call** shortcut related to the video section.
+- **Anam AI avatar** (if enabled in site settings): Conversational **video avatar** (Anam embed). Uses **knowledge you upload in Anam Lab** (including documents like this file). Position is typically bottom-left so it doesn’t cover the chat controls.
 
 ### Site-wide UX features
 
-- **Theme / appearance:** The site supports multiple **theme colors** (e.g. blue, purple, teal) — some assistants can change them on request when enabled.
+- **Theme / appearance:** The site supports multiple **theme colors** (e.g. blue, purple, teal); visitors can change them via the chat assistant’s phrasing (local keyword handling).
 - **Music:** A **music toggle** plays optional background audio (browsers may require a user click before audio starts).
 - **Icons:** Lucide icons are used across the UI.
 - **Resume:** The **Download Resume** button uses a file named `resume.pdf` in the site (update the file when your resume changes).
@@ -122,14 +121,14 @@ This is **Digvijay Simkhada’s personal portfolio site**: a single-page style l
 ### Technical notes (high level — for curious visitors or recruiters)
 
 - Front end: HTML, CSS, JavaScript; Tailwind is used for some utility styling.
-- **Deploy:** Often **Vercel** or similar static hosting; a small **serverless `/api/agent`** route may power the Gemini-based agent when `GEMINI_API_KEY` is set in hosting environment variables (not visible in the browser).
+- **Deploy:** Often **Vercel** or similar static hosting; optional serverless routes for **Anam** session/config (`/api/anam-session`, `/api/site-config`).
 - **Video calls:** **Firebase** (Realtime Database) for WebRTC signaling; users need a modern browser and microphone/camera permissions when using the call feature.
 
 ### What to tell visitors who ask “what can I do here?”
 
 - Read **About**, **Experience**, **Skills**, and **Projects**.
 - Play **games**, check **weather** and **map**, skim **tech news**, and use **Contact** to reach Digvijay.
-- Try the **chat** or **agent** (if live) for questions or site actions; try the **Anam avatar** (if enabled) for a voice-style Q&A grounded in uploaded knowledge.
+- Try the **chat** for scripted Q&A; try the **Anam avatar** (if enabled) for voice-style Q&A grounded in uploaded knowledge.
 - Use **Live Video Call** only when both sides agree on a PIN and understand it’s a demo-style WebRTC connection.
 
 ---
@@ -146,7 +145,7 @@ This is **Digvijay Simkhada’s personal portfolio site**: a single-page style l
 
 - Answer about **Digvijay Simkhada** and **this portfolio website** using the facts above.
 - For **personal facts** (jobs, GPA, projects), stick to what’s documented here; if unknown, say so and suggest **email** or **LinkedIn**.
-- For **website questions** (where is contact, how games work, what the Agent vs chat vs avatar do, how the PIN call works), use the **“About this website”** section.
+- For **website questions** (where is contact, how games work, what the chat vs Anam avatar do, how the PIN call works), use the **“About this website”** section.
 - Tone: professional, friendly, concise; suitable for recruiters, students, and general visitors.
 
 ---

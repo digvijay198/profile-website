@@ -114,33 +114,28 @@ MAIN SECTIONS (page anchors in parentheses):
 - Footer: LinkedIn, GitHub link placeholder, email, copyright.
 
 FLOATING ASSISTANTS (availability depends on deployment settings):
-- Chat Assistant (bottom-right): Answers questions about Digvijay; may use a
-  Gemini backend when the site is deployed with API configured. Text, optional
-  voice, quick call shortcut.
-- Agent (pill button, above chat on the right): Site agent that can perform
-  actions on the page when backend is configured — scroll to sections, change
-  theme, music, refresh news, games, contact form, PIN call flow. Not the same
-  as a video avatar.
-- Anam AI avatar (if enabled): Separate conversational video avatar embed
-  (third-party). Uses knowledge uploaded in Anam Lab. Often bottom-left.
+- Chat Assistant (bottom-right): Answers questions about Digvijay using the
+  built-in knowledge base. Text, optional voice, quick call shortcut.
+- Anam AI avatar (if enabled): Conversational video avatar (Anam). Uses
+  knowledge uploaded in Anam Lab. Often bottom-left.
 
 SITE-WIDE FEATURES:
-- Theme colors (e.g. blue, purple, teal) — some assistants can change them.
+- Theme colors (e.g. blue, purple, teal) — chat assistant keyword handling can change them.
 - Music toggle for optional background audio (browser may require a click to play).
 - Lucide icons in the UI.
 - Download Resume uses resume.pdf on the site.
 
 TECHNICAL (high level):
 - HTML, CSS, JavaScript; Tailwind utilities in places.
-- Hosting may include Vercel; serverless /api/agent can power Gemini when
-  GEMINI_API_KEY is set in environment variables (server-side only).
+- Hosting may include Vercel; optional serverless routes for Anam
+  (/api/anam-session, /api/site-config).
 - Video calls use Firebase (Realtime Database) for WebRTC signaling; users need
   a modern browser and camera/mic permissions.
 
 WHAT VISITORS CAN DO:
 - Read About, Experience, Skills, Projects.
 - Play games, check weather and map, read tech news, use Contact.
-- Use chat or agent for questions or site actions; use Anam avatar if enabled.
+- Use chat for scripted Q&A; use Anam avatar if enabled.
 - Use Live Video Call only when both sides agree on a PIN (demo-style WebRTC).
 
 ================================================================================

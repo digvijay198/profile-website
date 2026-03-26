@@ -467,44 +467,6 @@
         </div>
     </section>
 
-    <!-- AI Agent (ChatGPT-style; uses /api/agent) -->
-    <div class="agent-launcher-wrap" id="agentLauncherWrap">
-        <button type="button" class="agent-launcher" id="agentLauncher" onclick="toggleAgentPanel()" aria-label="Open AI Agent">
-            <i data-lucide="sparkles" class="agent-launcher-icon" aria-hidden="true"></i>
-            <span class="agent-launcher-label">Agent</span>
-        </button>
-        <div class="agent-panel" id="agentPanel" aria-hidden="true">
-            <div class="agent-panel-inner">
-                <header class="agent-panel-header">
-                    <div class="agent-panel-title-row">
-                        <i data-lucide="bot" class="agent-panel-title-icon" aria-hidden="true"></i>
-                        <div>
-                            <h2 class="agent-panel-title">AI Agent</h2>
-                            <p class="agent-panel-subtitle">Ask anything — I can control this site (theme, music, news, calls, games…)</p>
-                        </div>
-                    </div>
-                    <button type="button" class="agent-panel-close" id="agentPanelClose" onclick="closeAgentPanel()" aria-label="Close AI Agent">×</button>
-                </header>
-                <div class="agent-panel-messages" id="agentMessages">
-                    <div class="agent-msg agent-msg-assistant">
-                        <div class="agent-msg-avatar" aria-hidden="true"><i data-lucide="sparkles" class="w-4 h-4"></i></div>
-                        <div class="agent-msg-bubble">
-                            Hi — I’m your site agent. Try “scroll to projects”, “change theme to teal”, “refresh news”, or “connect me to Digvijay” for a video call.
-                        </div>
-                    </div>
-                </div>
-                <div class="agent-panel-input-wrap">
-                    <textarea id="agentInput" class="agent-panel-input" rows="1" placeholder="Message AI Agent…" maxlength="4000"></textarea>
-                    <button type="button" class="agent-panel-send" id="agentSend" onclick="sendAgentMessage()">
-                        <i data-lucide="arrow-up" class="w-5 h-5" aria-hidden="true"></i>
-                        <span class="sr-only">Send</span>
-                    </button>
-                </div>
-                <p class="agent-panel-hint">Vercel env: <code class="agent-code">GEMINI_API_KEY</code> · <code class="agent-code">ANAM_PERSONA_ID</code> · <code class="agent-code">ANAM_API_KEY</code></p>
-            </div>
-        </div>
-    </div>
-
     <!-- Chatbot -->
     <div class="chatbot-container" id="chatbotContainer">
         <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" aria-label="Open chat">
