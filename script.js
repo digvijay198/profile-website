@@ -923,8 +923,9 @@ function toggleChatbot() {
   if (!chatbotWindow) return;
   chatbotWindow.classList.toggle("active");
 
-  // Focus input when opened
+  // Focus input when opened; refresh Lucide (header AI icon, etc.)
   if (chatbotWindow.classList.contains("active")) {
+    if (typeof createLucideIcons === "function") createLucideIcons();
     setTimeout(() => document.getElementById("chatbotInput")?.focus(), 100);
   }
 }

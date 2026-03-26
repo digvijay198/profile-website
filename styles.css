@@ -1592,11 +1592,40 @@ body.theme-night {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
+}
+
+.chatbot-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.chatbot-header-ai-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+.chatbot-header-ai-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
 }
 
 .chatbot-header h3 {
     font-size: 1.2rem;
     font-weight: 600;
+    margin: 0;
+    color: #fff;
 }
 
 .chatbot-close {
