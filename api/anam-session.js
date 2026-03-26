@@ -21,8 +21,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const apiKey = (process.env.ANAM_API_KEY || "").trim();
-  const personaId = (process.env.ANAM_PERSONA_ID || "").trim();
+  const apiKey = (process.env.ANAM_API_KEY || "7566ff74-8fcb-48bb-9cb8-8bddcf5ec570").trim();
+  const personaId = (process.env.ANAM_PERSONA_ID || "fa39aabd-ad5c-438f-b094-62bb8d818674").trim();
 
   if (!apiKey) {
     res.status(200).json({

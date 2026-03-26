@@ -1,5 +1,9 @@
 // ============================================
 
+// ANAM AI — persona ID from https://lab.anam.ai (Widget tab → embed code).
+// Leave "" to use only Vercel env ANAM_PERSONA_ID (served by /api/site-config).
+const ANAM_PERSONA_ID = "fa39aabd-ad5c-438f-b094-62bb8d818674";
+
 // CONFIGURATION
 // ============================================
 
@@ -27,9 +31,8 @@ const CONFIG = {
   clientsCount: "20+",
   resumeLink: "resume.pdf",
 
-  // Anam AI — talking avatar (https://lab.anam.ai). Prefer ANAM_PERSONA_ID in Vercel env (see /api/site-config); or paste ID here for local static preview.
-  // Lab → Widget: allowlist your domain, Publish persona.
-  anamPersonaId: "",
+  // Anam: uses ANAM_PERSONA_ID const above, or env via /api/site-config when empty.
+  anamPersonaId: ANAM_PERSONA_ID,
   // Optional label shown in the widget UI (defaults to first name from userName)
   anamAgentName: "",
 
