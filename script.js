@@ -180,6 +180,7 @@ function initializeAll() {
   initializeLatestNews();
   initializeChatbot();
   initializeAnamWidget();
+  ensureAnamExternalSearchDocumentListener();
   initializeCallFeature();
   initializeContactForm();
   initializeGames();
@@ -204,79 +205,148 @@ function anamSanitizeSearchFragment(s, maxLen) {
 }
 
 /**
- * Open a URL in a new tab if scheme is http(s) only.
+ * Open a URL in a new tab if scheme is http(s) only. Returns false if likely pop-up blocked.
  */
 function anamOpenUrlSafe(url) {
   try {
     const u = new URL(url);
-    if (u.protocol !== "https:" && u.protocol !== "http:") return;
-    window.open(u.href, "_blank", "noopener,noreferrer");
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const w = window.open(u.href, "_blank", "noopener,noreferrer");
+    if (!w || w.closed) {
+      console.warn(
+        "[Anam] New tab was blocked or failed. Allow pop-ups for this site, or click the page once before talking to the avatar."
+      );
+      return false;
+    }
+    return true;
   } catch (_) {
-    /* invalid URL */
+    return false;
   }
 }
 
 /**
- * Parses assistant messages for magic tags and opens Google (or a URL) in new tabs.
- * Add to Anam Lab → persona → System prompt, e.g.:
- *
- * - Web: [[GOOGLE_SEARCH:your query]]
- * - Products / Shopping: [[GOOGLE_SHOP:product name]]  (same as [[GOOGLE_PRODUCTS:...]])
- * - Search within a site: [[GOOGLE_SITE:amazon.com|wireless mouse]]  (pipe between site and query)
- * - Open a specific page: [[OPEN_URL:https://example.com/path]]
- *
- * Pop-up blockers may block tabs until the user allows them for your domain.
+ * Normalize transcript text from Anam (shape varies by widget version).
  */
-function attachAnamExternalSearchListener(agentEl) {
-  if (!agentEl || !CONFIG.anamOpenGoogleFromMessages) return;
-  agentEl.addEventListener("anam-agent:message-received", (e) => {
-    const d = e.detail;
-    if (!d || d.role !== "agent" || typeof d.content !== "string") return;
-    const text = d.content;
+function anamExtractMessageText(detail) {
+  if (!detail || typeof detail !== "object") return "";
+  const d = detail;
+  if (typeof d.content === "string") return d.content;
+  if (typeof d.text === "string") return d.text;
+  if (typeof d.message === "string") return d.message;
+  if (Array.isArray(d.content)) {
+    return d.content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part.text === "string") return part.text;
+        return "";
+      })
+      .join("");
+  }
+  return "";
+}
 
-    const opened = new Set();
+/**
+ * Process transcript for magic tags; shared by document + element listeners.
+ */
+function anamProcessAssistantTextForExternalLinks(text) {
+  if (typeof text !== "string" || !text.includes("[[")) return;
 
-    const once = (url) => {
-      if (!url || opened.has(url)) return;
-      opened.add(url);
-      anamOpenUrlSafe(url);
-    };
+  const opened = new Set();
+  const once = (url) => {
+    if (!url || opened.has(url)) return;
+    opened.add(url);
+    anamOpenUrlSafe(url);
+  };
 
-    // [[GOOGLE_SEARCH:query]]
-    let m;
-    const reSearch = /\[\[GOOGLE_SEARCH:([^\]]{1,500})\]\]/gi;
-    while ((m = reSearch.exec(text)) !== null) {
-      const q = anamSanitizeSearchFragment(m[1]);
-      if (q) once(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
+  let m;
+
+  const reSearch = /\[\[GOOGLE_SEARCH:([^\]]{1,500})\]\]/gi;
+  while ((m = reSearch.exec(text)) !== null) {
+    const q = anamSanitizeSearchFragment(m[1]);
+    if (q) once(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
+  }
+
+  const reShop = /\[\[GOOGLE_(?:SHOP|PRODUCTS):([^\]]{1,500})\]\]/gi;
+  while ((m = reShop.exec(text)) !== null) {
+    const q = anamSanitizeSearchFragment(m[1]);
+    if (q) once(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`);
+  }
+
+  const reSite = /\[\[GOOGLE_SITE:([^\]|]{1,200})\|([^\]]{1,400})\]\]/gi;
+  while ((m = reSite.exec(text)) !== null) {
+    const site = anamSanitizeSearchFragment(m[1], 200).replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+    const innerQ = anamSanitizeSearchFragment(m[2], 400);
+    if (site && innerQ) {
+      const fullQ = `site:${site} ${innerQ}`;
+      once(`https://www.google.com/search?q=${encodeURIComponent(fullQ)}`);
     }
+  }
 
-    // [[GOOGLE_SHOP:query]] / [[GOOGLE_PRODUCTS:query]] → Shopping tab
-    const reShop = /\[\[GOOGLE_(?:SHOP|PRODUCTS):([^\]]{1,500})\]\]/gi;
-    while ((m = reShop.exec(text)) !== null) {
-      const q = anamSanitizeSearchFragment(m[1]);
-      if (q) once(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`);
-    }
+  /* YouTube: search results or watch by video id */
+  const reYtSearch = /\[\[YOUTUBE_SEARCH:([^\]]{1,300})\]\]/gi;
+  while ((m = reYtSearch.exec(text)) !== null) {
+    const q = anamSanitizeSearchFragment(m[1], 300);
+    if (q) once(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`);
+  }
+  const reYtVid = /\[\[YOUTUBE_VIDEO:([a-zA-Z0-9_-]{6,20})\]\]/gi;
+  while ((m = reYtVid.exec(text)) !== null) {
+    once(`https://www.youtube.com/watch?v=${encodeURIComponent(m[1])}`);
+  }
 
-    // [[GOOGLE_SITE:domain|query]] → Google with site: filter
-    const reSite = /\[\[GOOGLE_SITE:([^\]|]{1,200})\|([^\]]{1,400})\]\]/gi;
-    while ((m = reSite.exec(text)) !== null) {
-      const site = anamSanitizeSearchFragment(m[1], 200).replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
-      const innerQ = anamSanitizeSearchFragment(m[2], 400);
-      if (site && innerQ) {
-        const fullQ = `site:${site} ${innerQ}`;
-        once(`https://www.google.com/search?q=${encodeURIComponent(fullQ)}`);
-      }
+  /*
+   * [[OPEN_URL:...]] — allow long URLs (query strings, youtu.be, etc.).
+   * Non-greedy inner match up to ]] ; trim trailing punctuation model might add outside tag.
+   */
+  const reUrl = /\[\[OPEN_URL:\s*(https?:\/\/[\s\S]{1,2500}?)\]\]/gi;
+  while ((m = reUrl.exec(text)) !== null) {
+    let raw = m[1].trim().replace(/\s+/g, "");
+    raw = raw.replace(/[,.;)]+$/g, "");
+    if (raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://")) {
+      once(raw);
     }
+  }
+}
 
-    // [[OPEN_URL:https://...]] — open a specific website (https strongly preferred)
-    const reUrl = /\[\[OPEN_URL:(https?:\/\/[^\]\s]{1,2000})\]\]/gi;
-    while ((m = reUrl.exec(text)) !== null) {
-      const raw = m[1].trim();
-      if (raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://")) {
-        once(raw);
-      }
-    }
-  });
+function handleAnamMessageReceivedForExternalLinks(e) {
+  if (!CONFIG.anamOpenGoogleFromMessages) return;
+  const d = e.detail;
+  const text = anamExtractMessageText(d);
+  if (!text || !text.includes("[[")) return;
+
+  const r = String(d.role || "").toLowerCase();
+  if (r === "user") return;
+
+  const hasTag = /\[\[(?:GOOGLE_|OPEN_URL|YOUTUBE_)/i.test(text);
+  if (!hasTag) return;
+
+  const assistantOk =
+    !r ||
+    r === "agent" ||
+    r === "assistant" ||
+    r === "model" ||
+    r === "avatar";
+  if (!assistantOk) return;
+
+  anamProcessAssistantTextForExternalLinks(text);
+}
+
+/**
+ * Document capture: Anam may dispatch from Shadow DOM — host listener sometimes misses events.
+ * One listener per page (Anam allows one widget per page).
+ */
+function ensureAnamExternalSearchDocumentListener() {
+  if (!CONFIG.anamOpenGoogleFromMessages || window.__anamExternalSearchDocListener) return;
+  window.__anamExternalSearchDocListener = true;
+  document.addEventListener("anam-agent:message-received", handleAnamMessageReceivedForExternalLinks, true);
+}
+
+/**
+ * In Anam Lab → system prompt, teach tags, e.g.:
+ * [[GOOGLE_SEARCH:q]] [[GOOGLE_SHOP:q]] [[GOOGLE_SITE:site.com|q]] [[OPEN_URL:https://...]]
+ * [[YOUTUBE_SEARCH:q]] [[YOUTUBE_VIDEO:VIDEO_ID]]
+ */
+function attachAnamExternalSearchListener(_agentEl) {
+  ensureAnamExternalSearchDocumentListener();
 }
 
 /**
