@@ -36,6 +36,9 @@ const CONFIG = {
   // Optional label shown in the widget UI (defaults to first name from userName)
   anamAgentName: "",
 
+  // Anam: assistant can trigger new-tab searches via magic tags (see attachAnamExternalSearchListener).
+  anamOpenGoogleFromMessages: true,
+
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
       // Greetings & intro
@@ -190,6 +193,93 @@ if (document.readyState === "loading") {
 }
 
 /**
+ * Sanitize text used in Google / URL openers (Anam assistant output).
+ */
+function anamSanitizeSearchFragment(s, maxLen) {
+  const n = maxLen || 500;
+  return String(s)
+    .trim()
+    .replace(/[\r\n]+/g, " ")
+    .slice(0, n);
+}
+
+/**
+ * Open a URL in a new tab if scheme is http(s) only.
+ */
+function anamOpenUrlSafe(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return;
+    window.open(u.href, "_blank", "noopener,noreferrer");
+  } catch (_) {
+    /* invalid URL */
+  }
+}
+
+/**
+ * Parses assistant messages for magic tags and opens Google (or a URL) in new tabs.
+ * Add to Anam Lab → persona → System prompt, e.g.:
+ *
+ * - Web: [[GOOGLE_SEARCH:your query]]
+ * - Products / Shopping: [[GOOGLE_SHOP:product name]]  (same as [[GOOGLE_PRODUCTS:...]])
+ * - Search within a site: [[GOOGLE_SITE:amazon.com|wireless mouse]]  (pipe between site and query)
+ * - Open a specific page: [[OPEN_URL:https://example.com/path]]
+ *
+ * Pop-up blockers may block tabs until the user allows them for your domain.
+ */
+function attachAnamExternalSearchListener(agentEl) {
+  if (!agentEl || !CONFIG.anamOpenGoogleFromMessages) return;
+  agentEl.addEventListener("anam-agent:message-received", (e) => {
+    const d = e.detail;
+    if (!d || d.role !== "agent" || typeof d.content !== "string") return;
+    const text = d.content;
+
+    const opened = new Set();
+
+    const once = (url) => {
+      if (!url || opened.has(url)) return;
+      opened.add(url);
+      anamOpenUrlSafe(url);
+    };
+
+    // [[GOOGLE_SEARCH:query]]
+    let m;
+    const reSearch = /\[\[GOOGLE_SEARCH:([^\]]{1,500})\]\]/gi;
+    while ((m = reSearch.exec(text)) !== null) {
+      const q = anamSanitizeSearchFragment(m[1]);
+      if (q) once(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
+    }
+
+    // [[GOOGLE_SHOP:query]] / [[GOOGLE_PRODUCTS:query]] → Shopping tab
+    const reShop = /\[\[GOOGLE_(?:SHOP|PRODUCTS):([^\]]{1,500})\]\]/gi;
+    while ((m = reShop.exec(text)) !== null) {
+      const q = anamSanitizeSearchFragment(m[1]);
+      if (q) once(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`);
+    }
+
+    // [[GOOGLE_SITE:domain|query]] → Google with site: filter
+    const reSite = /\[\[GOOGLE_SITE:([^\]|]{1,200})\|([^\]]{1,400})\]\]/gi;
+    while ((m = reSite.exec(text)) !== null) {
+      const site = anamSanitizeSearchFragment(m[1], 200).replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+      const innerQ = anamSanitizeSearchFragment(m[2], 400);
+      if (site && innerQ) {
+        const fullQ = `site:${site} ${innerQ}`;
+        once(`https://www.google.com/search?q=${encodeURIComponent(fullQ)}`);
+      }
+    }
+
+    // [[OPEN_URL:https://...]] — open a specific website (https strongly preferred)
+    const reUrl = /\[\[OPEN_URL:(https?:\/\/[^\]\s]{1,2000})\]\]/gi;
+    while ((m = reUrl.exec(text)) !== null) {
+      const raw = m[1].trim();
+      if (raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://")) {
+        once(raw);
+      }
+    }
+  });
+}
+
+/**
  * Anam AI avatar widget (@anam-ai/agent-widget). One instance per page (Anam requirement).
  * Production: GET /api/anam-session mints session-token (ANAM_API_KEY + ANAM_PERSONA_ID on server).
  * Fallback: agent-id from CONFIG or /api/site-config (Lab domain allowlist).
@@ -219,6 +309,8 @@ function mountAnamWidget({ personaId, sessionToken }) {
   agent.setAttribute("call-to-action", `Ask ${first}'s AI`);
   const displayName = typeof CONFIG.anamAgentName === "string" ? CONFIG.anamAgentName.trim() : "";
   if (displayName) agent.setAttribute("agent-name", displayName);
+
+  attachAnamExternalSearchListener(agent);
 
   mount.appendChild(agent);
 
