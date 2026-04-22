@@ -349,7 +349,7 @@
                 <div class="tool-card weather-card">
                     <h3 class="tool-title" data-i18n="tool.weather">Weather</h3>
                     <div class="weather-widget" id="weatherWidget">
-                        <div class="weather-loading" data-i18n="weather.loading">Loading weather...</div>
+                        <div class="weather-loading">Loading weather...</div>
                         <div class="weather-content" style="display: none;">
                             <div class="weather-icon flex items-center justify-center" id="weatherIcon"><i data-lucide="sun" class="w-14 h-14" aria-hidden="true"></i></div>
                             <div class="weather-temp" id="weatherTemp">--°C</div>
@@ -391,7 +391,7 @@
             <div class="news-toolbar">
                 <div class="news-status" id="newsStatus">
                     <i data-lucide="newspaper" class="w-5 h-5" aria-hidden="true"></i>
-                    <span data-i18n="news.loading">Loading latest stories…</span>
+                    <span id="newsStatusText">Loading latest stories…</span>
                 </div>
                 <button type="button" class="btn btn-secondary news-refresh" id="newsRefresh">
                     <i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i>

@@ -124,6 +124,163 @@ const CONFIG = {
 };
 
 // ============================================
+// I18N (see i18n.js for SITE_I18N + SITE_LOCALES)
+// ============================================
+
+const SITE_LOCALE_KEY = "siteLocale";
+
+function getSiteLocale() {
+  try {
+    const v = localStorage.getItem(SITE_LOCALE_KEY);
+    if (v && window.SITE_I18N && window.SITE_I18N[v]) return v;
+  } catch (_) {}
+  return "en";
+}
+
+function setSiteLocale(code) {
+  if (!code || !window.SITE_I18N || !window.SITE_I18N[code]) return;
+  try {
+    localStorage.setItem(SITE_LOCALE_KEY, code);
+  } catch (_) {}
+}
+
+function siteT(key) {
+  const loc = getSiteLocale();
+  const tables = window.SITE_I18N || {};
+  const cur = tables[loc];
+  const en = tables.en;
+  const v = cur && Object.prototype.hasOwnProperty.call(cur, key) ? cur[key] : null;
+  if (v != null && String(v).length) return v;
+  if (en && Object.prototype.hasOwnProperty.call(en, key)) return en[key];
+  return key;
+}
+
+function siteTParams(key, params) {
+  let s = siteT(key);
+  if (params && typeof params === "object") {
+    Object.keys(params).forEach((k) => {
+      s = String(s).split(`{${k}}`).join(String(params[k]));
+    });
+  }
+  return s;
+}
+
+function speechLocaleBcp47() {
+  const m = { en: "en-US", es: "es-ES", ne: "ne-NP", hi: "hi-IN", zh: "zh-CN" };
+  return m[getSiteLocale()] || "en-US";
+}
+
+function applySiteLanguage() {
+  document.documentElement.setAttribute("lang", getSiteLocale());
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (!key) return;
+    el.textContent = siteT(key);
+  });
+
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-html");
+    if (!key) return;
+    el.innerHTML = siteT(key);
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (!key) return;
+    el.setAttribute("placeholder", siteT(key));
+  });
+
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-aria");
+    if (!key) return;
+    el.setAttribute("aria-label", siteT(key));
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    if (!key) return;
+    el.setAttribute("title", siteT(key));
+  });
+
+  const footer = document.getElementById("footerCopyright");
+  if (footer) {
+    footer.textContent = siteTParams("footer.copy", {
+      year: String(new Date().getFullYear()),
+      name: CONFIG.userName || ""
+    });
+  }
+
+  document.title = siteT("meta.pageTitle");
+
+  const cur = document.getElementById("langMenuCurrent");
+  const locales = window.SITE_LOCALES || [];
+  const loc = getSiteLocale();
+  const meta = locales.find((x) => x.code === loc);
+  if (cur) cur.textContent = meta ? meta.short : String(loc).toUpperCase();
+
+  const langBtn = document.getElementById("langMenuBtn");
+  if (langBtn) langBtn.setAttribute("aria-label", siteT("lang.aria"));
+
+  if (typeof window.refreshGamesI18n === "function") window.refreshGamesI18n();
+  if (typeof createLucideIcons === "function") createLucideIcons();
+}
+
+function initializeLanguageSwitcher() {
+  const menuBtn = document.getElementById("langMenuBtn");
+  const menu = document.getElementById("langMenu");
+  if (!menuBtn || !menu) return;
+
+  const locales = window.SITE_LOCALES || [];
+  if (!menu.querySelector("li") && locales.length) {
+    locales.forEach((L) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "none");
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "option");
+      b.dataset.lang = L.code;
+      b.className = "lang-option";
+      b.textContent = L.label;
+      b.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        setSiteLocale(L.code);
+        applySiteLanguage();
+        menu.hidden = true;
+        menuBtn.setAttribute("aria-expanded", "false");
+      });
+      li.appendChild(b);
+      menu.appendChild(li);
+    });
+  }
+
+  menu.addEventListener("click", (e) => e.stopPropagation());
+
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = menu.hidden;
+    menu.hidden = !open;
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  document.addEventListener("click", () => {
+    if (!menu.hidden) {
+      menu.hidden = true;
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !menu.hidden) {
+      menu.hidden = true;
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  applySiteLanguage();
+}
+
+// ============================================
 // GLOBALS
 // ============================================
 
@@ -184,6 +341,7 @@ function initializeAll() {
   initializeCallFeature();
   initializeContactForm();
   initializeGames();
+  initializeLanguageSwitcher();
   createLucideIcons();
 }
 
@@ -448,10 +606,6 @@ function initializePersonalInfo() {
     }
   }
 
-  const footerP = document.querySelector(".footer p");
-  if (footerP && CONFIG.userName) {
-    footerP.innerHTML = `&copy; ${new Date().getFullYear()} ${CONFIG.userName}. All rights reserved.`;
-  }
 }
 
 // ============================================
@@ -695,7 +849,7 @@ function initializeWeatherWidget() {
   if (!weatherWidget) return;
 
   if (!CONFIG.weatherAPIKey) {
-    showWeatherError("Weather API key missing in CONFIG.");
+    showWeatherError(siteT("weather.errorKey"));
     return;
   }
 
@@ -710,6 +864,8 @@ async function getWeatherByCity(city) {
   try {
     loadingEl.style.display = "block";
     contentEl.style.display = "none";
+    loadingEl.style.color = "";
+    loadingEl.textContent = siteT("weather.loading");
 
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${CONFIG.weatherAPIKey}`;
     const res = await fetch(url);
@@ -719,7 +875,7 @@ async function getWeatherByCity(city) {
     renderWeather(data, `${data.name}, ${data.sys.country}`);
   } catch (err) {
     console.error(err);
-    showWeatherError("Unable to load weather. Check your API key or location.");
+    showWeatherError(siteT("weather.errorLoad"));
   }
 }
 
@@ -730,6 +886,8 @@ async function getWeatherByCoords(lat, lng, label = "") {
   try {
     loadingEl.style.display = "block";
     contentEl.style.display = "none";
+    loadingEl.style.color = "";
+    loadingEl.textContent = siteT("weather.loading");
 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${CONFIG.weatherAPIKey}`;
     const res = await fetch(url);
@@ -739,7 +897,7 @@ async function getWeatherByCoords(lat, lng, label = "") {
     renderWeather(data, label || `${data.name}, ${data.sys.country}`);
   } catch (err) {
     console.error(err);
-    showWeatherError("Unable to load weather. Check your API key.");
+    showWeatherError(siteT("weather.errorCoords"));
   }
 }
 
@@ -848,12 +1006,12 @@ function formatRelativeTime(isoOrEpoch) {
   if (!Number.isFinite(ts)) return "";
   const diffMs = Date.now() - ts;
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return siteT("time.justNow");
+  if (mins < 60) return siteTParams("time.mAgo", { n: String(mins) });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return siteTParams("time.hAgo", { n: String(hrs) });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return siteTParams("time.dAgo", { n: String(days) });
 }
 
 async function fetchWithTimeout(url, { timeoutMs = 9000 } = {}) {
@@ -871,7 +1029,7 @@ function setNewsStatus(text, isError = false) {
   const el = document.getElementById("newsStatus");
   if (!el) return;
   el.style.color = isError ? "#ef4444" : "";
-  const span = el.querySelector("span");
+  const span = document.getElementById("newsStatusText") || el.querySelector("span");
   if (span) span.textContent = text;
 }
 
@@ -881,7 +1039,7 @@ function renderNews(items) {
   grid.innerHTML = "";
 
   if (!items || !items.length) {
-    grid.innerHTML = `<div class="tool-card" style="grid-column: 1 / -1; text-align:center;">No stories available right now.</div>`;
+    grid.innerHTML = `<div class="tool-card" style="grid-column: 1 / -1; text-align:center;">${siteT("news.none")}</div>`;
     return;
   }
 
@@ -908,12 +1066,12 @@ function renderNews(items) {
         ${points != null ? `
           <div class="news-meta-item">
             <i data-lucide="zap" aria-hidden="true"></i>
-            <span>${points} points</span>
+            <span>${siteTParams("news.metaPoints", { n: String(points) })}</span>
           </div>` : ""}
         ${comments != null ? `
           <div class="news-meta-item">
             <i data-lucide="messages-square" aria-hidden="true"></i>
-            <span>${comments} comments</span>
+            <span>${siteTParams("news.metaComments", { n: String(comments) })}</span>
           </div>` : ""}
         <div class="news-source">
           <i data-lucide="link" aria-hidden="true"></i>
@@ -930,7 +1088,7 @@ function renderNews(items) {
 async function loadLatestNews() {
   // Using HN Algolia API (no key required). If CORS blocks, we show a friendly fallback.
   const url = "https://hn.algolia.com/api/v1/search_by_date?tags=story&query=technology&hitsPerPage=9";
-  setNewsStatus("Loading latest stories…");
+  setNewsStatus(siteT("news.loading"));
 
   try {
     const res = await fetchWithTimeout(url, { timeoutMs: 9000 });
@@ -951,10 +1109,11 @@ async function loadLatestNews() {
       }));
 
     renderNews(items);
-    setNewsStatus(`Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setNewsStatus(siteTParams("news.updated", { time: timeStr }));
   } catch (err) {
     console.error("News fetch error:", err);
-    setNewsStatus("Couldn’t load live news (network/CORS). Showing helpful links instead.", true);
+    setNewsStatus(siteT("news.fallback"), true);
     renderNews([
       { title: "Hacker News (Top)", url: "https://news.ycombinator.com/", createdAt: Date.now(), source: "news.ycombinator.com" },
       { title: "The Verge (Tech)", url: "https://www.theverge.com/tech", createdAt: Date.now(), source: "theverge.com" },
@@ -1046,7 +1205,7 @@ function geocodeAddress(address) {
       // ✅ Sync weather with map location
       getWeatherByCoords(lat, lng, results[0].formatted_address);
     } else {
-      alert("Location not found. Try a different place.");
+      alert(siteT("maps.notFound"));
     }
   });
 }
@@ -1126,7 +1285,7 @@ function toggleVoiceInput() {
   if (!input || !micBtn || !statusEl) return;
 
   if (!SpeechRecognition) {
-    alert("Voice input is not supported in this browser. Try Chrome or Edge.");
+    alert(siteT("chatbot.voiceUnsupported"));
     return;
   }
 
@@ -1140,7 +1299,7 @@ function toggleVoiceInput() {
   const recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "en-US";
+  recognition.lang = speechLocaleBcp47();
   recognition.maxAlternatives = 2;
 
   recognition.onstart = () => {
@@ -1148,7 +1307,7 @@ function toggleVoiceInput() {
     finalTranscript = "";
     micBtn.classList.add("listening");
     statusEl.style.display = "block";
-    statusEl.textContent = "Speak now...";
+    statusEl.textContent = siteT("chatbot.speakNow");
   };
 
   recognition.onend = () => {
@@ -1169,22 +1328,22 @@ function toggleVoiceInput() {
       const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
         finalTranscript += transcript;
-        statusEl.textContent = "Got it! Sending...";
+        statusEl.textContent = siteT("chatbot.gotIt");
       } else {
         interim += transcript;
       }
     }
     if (interim) {
-      statusEl.textContent = "Hearing: " + interim.substring(0, 40) + (interim.length > 40 ? "…" : "");
+      statusEl.textContent = `${siteT("chatbot.hearing")} ${interim.substring(0, 40)}${interim.length > 40 ? "…" : ""}`;
     }
   };
 
   recognition.onerror = (event) => {
     if (event.error === "not-allowed") {
-      statusEl.textContent = "Microphone access denied.";
+      statusEl.textContent = siteT("chatbot.micDenied");
       setTimeout(() => { statusEl.style.display = "none"; }, 2500);
     } else if (event.error === "no-speech") {
-      statusEl.textContent = "No speech detected. Try again.";
+      statusEl.textContent = siteT("chatbot.noSpeech");
       setTimeout(() => { statusEl.style.display = "none"; }, 1500);
     }
   };
@@ -1651,7 +1810,7 @@ function initializeContactForm() {
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    showFormMessage("Thank you for your message! I'll get back to you soon.", "success");
+    showFormMessage(siteT("form.success"), "success");
     form.reset();
   });
 }
@@ -1892,19 +2051,39 @@ function initializeTicTacToe() {
   const board = document.getElementById("ticTacToeBoard");
   const status = document.getElementById("ticTacToeStatus");
   const resetBtn = document.getElementById("ticTacToeReset");
-  
+
   if (!board || !status || !resetBtn) return;
-  
+
   let currentPlayer = "X";
   let gameBoard = Array(9).fill("");
   let gameOver = false;
-  
+  /** @type {{ kind: "play", player: string } | { kind: "win", player: string } | { kind: "draw" }} */
+  let statusMode = { kind: "play", player: "X" };
+
   const winningCombos = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-    [0, 4, 8], [2, 4, 6] // diagonals
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6]
   ];
-  
+
+  function syncStatusText() {
+    if (!status) return;
+    if (statusMode.kind === "draw") {
+      status.textContent = siteT("game.ticDraw");
+    } else if (statusMode.kind === "win") {
+      status.textContent = siteTParams("game.ticWin", { p: statusMode.player });
+    } else {
+      status.textContent = siteTParams("game.ticTurn", { p: statusMode.player });
+    }
+  }
+
+  window.refreshGamesI18n = syncStatusText;
+
   function checkWinner() {
     for (const combo of winningCombos) {
       const [a, b, c] = combo;
@@ -1912,12 +2091,12 @@ function initializeTicTacToe() {
         return { winner: gameBoard[a], combo };
       }
     }
-    if (gameBoard.every(cell => cell !== "")) {
+    if (gameBoard.every((cell) => cell !== "")) {
       return { winner: "draw" };
     }
     return null;
   }
-  
+
   function updateDisplay() {
     const cells = board.querySelectorAll(".cell");
     cells.forEach((cell, index) => {
@@ -1927,43 +2106,46 @@ function initializeTicTacToe() {
       if (gameBoard[index] === "O") cell.classList.add("o");
     });
   }
-  
+
   function handleCellClick(index) {
     if (gameOver || gameBoard[index] !== "") return;
-    
+
     gameBoard[index] = currentPlayer;
     updateDisplay();
-    
+
     const result = checkWinner();
     if (result) {
       gameOver = true;
       if (result.winner === "draw") {
-        status.textContent = "It's a draw!";
+        statusMode = { kind: "draw" };
       } else {
-        status.textContent = `Player ${result.winner} wins!`;
-        result.combo.forEach(i => {
+        statusMode = { kind: "win", player: result.winner };
+        result.combo.forEach((i) => {
           board.querySelectorAll(".cell")[i].classList.add("winner");
         });
       }
     } else {
       currentPlayer = currentPlayer === "X" ? "O" : "X";
-      status.textContent = `Player ${currentPlayer}'s turn`;
+      statusMode = { kind: "play", player: currentPlayer };
     }
+    syncStatusText();
   }
-  
+
   function resetGame() {
     currentPlayer = "X";
     gameBoard = Array(9).fill("");
     gameOver = false;
-    status.textContent = "Player X's turn";
+    statusMode = { kind: "play", player: "X" };
+    syncStatusText();
     updateDisplay();
   }
-  
+
   board.querySelectorAll(".cell").forEach((cell, index) => {
     cell.addEventListener("click", () => handleCellClick(index));
   });
-  
+
   resetBtn.addEventListener("click", resetGame);
+  syncStatusText();
 }
 
 // Snake Game
@@ -2086,7 +2268,7 @@ function initializeSnake() {
       gameLoop = null;
     }
     updateButtonStates();
-    alert(`Game Over! Your score: ${score}`);
+    alert(siteTParams("game.snakeOver", { s: String(score) }));
     resetGame();
   }
   
