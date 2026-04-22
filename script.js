@@ -1854,6 +1854,52 @@ window.downloadResume = downloadResume;
 // CALL FEATURE (PIN-based WebRTC using Firebase RTDB)
 // ============================================
 
+/** STUN + public TURN demo relay (improves NAT traversal; replace with your own TURN in production). */
+function buildCallIceServers() {
+  return {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      {
+        urls: [
+          "turn:a.relay.metered.ca:80",
+          "turn:a.relay.metered.ca:443",
+          "turn:a.relay.metered.ca:443?transport=tcp"
+        ],
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      }
+    ],
+    iceCandidatePoolSize: 10
+  };
+}
+
+function formatCallError(err) {
+  const name = err && err.name;
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return "Camera or microphone was blocked. Allow access for this site in your browser address bar or settings.";
+  }
+  const msg = (err && (err.message || String(err))) || "";
+  const code = err && err.code;
+  if (code === "PERMISSION_DENIED" || /permission_denied/i.test(msg)) {
+    return 'Firebase denied access. In Firebase Console → Realtime Database → Rules, allow read/write under "calls" while testing (see the note under the call buttons).';
+  }
+  if (/invalid firebase database url|can't determine firebase database|database url not found|404.*Not Found/i.test(msg)) {
+    return "Realtime Database is missing or databaseURL is wrong. In Firebase Console create a Realtime Database (not only Firestore) and put its URL in firebaseConfig.databaseURL in script.js.";
+  }
+  return msg || "Could not set up the call.";
+}
+
+function callEnvironmentBlockReason() {
+  if (location.protocol === "file:") {
+    return "Open this site over http://localhost or https://… (not as a file:// page). Camera access is blocked on file URLs.";
+  }
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    return "This browser does not support camera/microphone for WebRTC.";
+  }
+  return "";
+}
+
 function initializeCallFeature() {
   const pinInput = document.getElementById("callPin");
   const createBtn = document.getElementById("callCreate");
@@ -1867,7 +1913,12 @@ function initializeCallFeature() {
 
   db = initFirebaseDb();
   if (!db) {
-    if (statusEl) statusEl.textContent = "Video call unavailable: Firebase not loaded. Check that the Firebase scripts load before script.js.";
+    if (statusEl) {
+      statusEl.textContent =
+        typeof firebase === "undefined"
+          ? "Video call unavailable: Firebase scripts did not load (check network / ad blockers)."
+          : "Video call unavailable: Firebase failed to start. Confirm Realtime Database exists and databaseURL in script.js matches the Firebase Console.";
+    }
     return;
   }
 
@@ -1875,10 +1926,6 @@ function initializeCallFeature() {
   let localStream = null;
   let isHost = false;
   let callRef = null;
-
-  const servers = {
-    iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }]
-  };
 
   function setStatus(msg) {
     if (statusEl) statusEl.textContent = msg;
@@ -1892,7 +1939,12 @@ function initializeCallFeature() {
   }
 
   async function createPeerConnection(pin) {
-    pc = new RTCPeerConnection(servers);
+    if (pc) {
+      pc.onconnectionstatechange = null;
+      pc.close();
+      pc = null;
+    }
+    pc = new RTCPeerConnection(buildCallIceServers());
     const stream = await getLocalStream();
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
@@ -1907,11 +1959,22 @@ function initializeCallFeature() {
       }
     };
 
+    pc.onconnectionstatechange = () => {
+      if (!pc) return;
+      const s = pc.connectionState;
+      if (s === "failed") {
+        setStatus("Call failed to connect (network/firewall). Try another Wi‑Fi or mobile hotspot, or try again in a minute.");
+      } else if (s === "connected") {
+        setStatus(isHost ? "Connected — you are hosting." : "Connected — you are in the call.");
+      }
+    };
+
     hangupBtn.disabled = false;
   }
 
-  function cleanup(pin) {
+  function cleanupMediaOnly() {
     if (pc) {
+      pc.onconnectionstatechange = null;
       pc.onicecandidate = null;
       pc.ontrack = null;
       pc.close();
@@ -1924,9 +1987,21 @@ function initializeCallFeature() {
     }
     remoteVideo.srcObject = null;
     hangupBtn.disabled = true;
-    if (pin && callRef) {
-      db.ref(`calls/${pin}`).remove();
+    if (callRef) {
+      try {
+        callRef.off();
+      } catch (_) {}
+      callRef = null;
     }
+  }
+
+  function cleanup(pin) {
+    cleanupMediaOnly();
+    const p = typeof pin === "string" ? pin.trim() : "";
+    if (p && db) {
+      return db.ref("calls/" + p).remove().catch(() => {});
+    }
+    return Promise.resolve();
   }
 
   createBtn.addEventListener("click", async () => {
@@ -1935,11 +2010,16 @@ function initializeCallFeature() {
       setStatus("Use a 4–6 digit numeric PIN.");
       return;
     }
+    const envBlock = callEnvironmentBlockReason();
+    if (envBlock) {
+      setStatus(envBlock);
+      return;
+    }
     try {
       setStatus("Starting host…");
+      await cleanup(pin);
       isHost = true;
       callRef = db.ref("calls/" + pin);
-      await callRef.remove();
 
       await createPeerConnection(pin);
 
@@ -1984,7 +2064,7 @@ function initializeCallFeature() {
       guestCandidatesRef.on("child_added", addGuestCandidate);
     } catch (err) {
       console.error("Host error:", err);
-      setStatus("Error: " + (err.message || err.code || "Could not start host. Enable Realtime Database in Firebase Console and set rules to allow read/write."));
+      setStatus("Error: " + formatCallError(err));
     }
   });
 
@@ -1994,8 +2074,14 @@ function initializeCallFeature() {
       setStatus("Use a 4–6 digit numeric PIN.");
       return;
     }
+    const envBlock = callEnvironmentBlockReason();
+    if (envBlock) {
+      setStatus(envBlock);
+      return;
+    }
     try {
       setStatus("Joining…");
+      cleanupMediaOnly();
       isHost = false;
       callRef = db.ref("calls/" + pin);
 
@@ -2026,13 +2112,13 @@ function initializeCallFeature() {
       hostCandidatesRef.on("child_added", addHostCandidate);
     } catch (err) {
       console.error("Join error:", err);
-      setStatus("Error: " + (err.message || err.code || "Could not join. Check Firebase Realtime Database is enabled and rules allow read/write."));
+      setStatus("Error: " + formatCallError(err));
     }
   });
 
   hangupBtn.addEventListener("click", () => {
     const pin = pinInput.value.trim();
-    cleanup(pin);
+    void cleanup(pin);
     setStatus("Call ended.");
   });
 }

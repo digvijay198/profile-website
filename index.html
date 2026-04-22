@@ -458,6 +458,11 @@
                         <button type="button" id="callJoin" class="btn btn-secondary" data-i18n="call.join">Join</button>
                     </div>
                     <p id="callStatus" class="call-status"></p>
+                    <p class="call-troubleshoot">
+                        If calls never connect: use <strong>HTTPS</strong> or <code>http://localhost</code> (not <code>file://</code>).
+                        In Firebase Console create <strong>Realtime Database</strong> (Firestore alone is not enough), then set Rules so <code>calls</code> can be read/written while you test.
+                        Same 4–6 digit PIN on both sides — click <strong>Host</strong> first, then <strong>Join</strong>.
+                    </p>
                 </div>
                 <div class="call-video-panel">
                     <div class="call-video-wrapper">
