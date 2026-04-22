@@ -30,7 +30,7 @@
     
     <!-- Music Player -->
     <div class="music-player" id="musicPlayer">
-        <button class="music-toggle" id="musicToggle" aria-label="Toggle music">
+        <button class="music-toggle" id="musicToggle" data-i18n-aria="music.aria" aria-label="Toggle music">
             <i data-lucide="music" class="music-icon w-6 h-6" aria-hidden="true"></i>
         </button>
         <audio id="backgroundMusic" loop>
@@ -41,18 +41,27 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Portfolio</div>
-            <ul class="nav-menu">
-                <li><a href="#home" class="nav-link">Home</a></li>
-                <li><a href="#about" class="nav-link">About</a></li>
-                <li><a href="#experience" class="nav-link">Experience</a></li>
-                <li><a href="#skills" class="nav-link">Skills</a></li>
-                <li><a href="#projects" class="nav-link">Projects</a></li>
-                <li><a href="#video" class="nav-link">Video</a></li>
-                <li><a href="#games" class="nav-link">Games</a></li>
-                <li><a href="#news" class="nav-link">News</a></li>
-                <li><a href="#contact" class="nav-link">Contact</a></li>
-            </ul>
+            <div class="logo" data-i18n="nav.portfolio">Portfolio</div>
+            <div class="nav-right">
+                <ul class="nav-menu">
+                    <li><a href="#home" class="nav-link" data-i18n="nav.home">Home</a></li>
+                    <li><a href="#about" class="nav-link" data-i18n="nav.about">About</a></li>
+                    <li><a href="#experience" class="nav-link" data-i18n="nav.experience">Experience</a></li>
+                    <li><a href="#skills" class="nav-link" data-i18n="nav.skills">Skills</a></li>
+                    <li><a href="#projects" class="nav-link" data-i18n="nav.projects">Projects</a></li>
+                    <li><a href="#video" class="nav-link" data-i18n="nav.video">Video</a></li>
+                    <li><a href="#games" class="nav-link" data-i18n="nav.games">Games</a></li>
+                    <li><a href="#news" class="nav-link" data-i18n="nav.news">News</a></li>
+                    <li><a href="#contact" class="nav-link" data-i18n="nav.contact">Contact</a></li>
+                </ul>
+                <div class="lang-switcher">
+                    <button type="button" class="lang-menu-btn" id="langMenuBtn" aria-expanded="false" aria-haspopup="listbox" aria-controls="langMenu">
+                        <i data-lucide="languages" class="lang-icon" aria-hidden="true"></i>
+                        <span id="langMenuCurrent">EN</span>
+                    </button>
+                    <ul class="lang-menu" id="langMenu" role="listbox" hidden></ul>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -68,13 +77,13 @@
                 </div>
             </div>
             <h1 class="hero-title">
-                <span class="title-line">Hello, I'm</span>
+                <span class="title-line" data-i18n="hero.hello">Hello, I'm</span>
                 <span class="title-name" id="userName">Your Name</span>
             </h1>
             <p class="hero-subtitle" id="userTitle">Your Professional Title</p>
             <div class="hero-buttons">
-                <button class="btn btn-primary" onclick="scrollToSection('contact')">Get In Touch</button>
-                <button class="btn btn-secondary" onclick="downloadResume()">Download Resume</button>
+                <button type="button" class="btn btn-primary" onclick="scrollToSection('contact')" data-i18n="hero.getInTouch">Get In Touch</button>
+                <button type="button" class="btn btn-secondary" onclick="downloadResume()" data-i18n="hero.downloadResume">Download Resume</button>
             </div>
         </div>
         <div class="scroll-indicator">
@@ -85,7 +94,7 @@
     <!-- About Section -->
     <section id="about" class="section about-section">
         <div class="container">
-            <h2 class="section-title">About Me</h2>
+            <h2 class="section-title" data-i18n="section.about">About Me</h2>
             <div class="about-content">
                 <div class="about-text">
                     <p id="aboutText" class="fade-in">
@@ -96,15 +105,15 @@
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-number" id="yearsExperience">2+</div>
-                            <div class="stat-label">Years Experience</div>
+                            <div class="stat-label" data-i18n="stat.years">Years Experience</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-number" id="projectsCount">4+</div>
-                            <div class="stat-label">Projects Completed</div>
+                            <div class="stat-label" data-i18n="stat.projects">Projects Completed</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-number" id="clientsCount">20+</div>
-                            <div class="stat-label">Students Helped</div>
+                            <div class="stat-label" data-i18n="stat.students">Students Helped</div>
                         </div>
                     </div>
                 </div>
@@ -115,33 +124,33 @@
     <!-- Experience Section -->
     <section id="experience" class="section experience-section">
         <div class="container">
-            <h2 class="section-title">Experience</h2>
+            <h2 class="section-title" data-i18n="section.experience">Experience</h2>
             <div class="timeline" id="experienceTimeline">
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h3 class="timeline-title">Computer Science Tutor</h3>
-                        <p class="timeline-company">Caldwell University</p>
-                        <p class="timeline-date">March 2025 - Present</p>
-                        <p class="timeline-description">Campus-certified tutor providing academic support in Programming I (Python), assisting students in developing coding proficiency and problem-solving skills. Conducted one-on-one sessions to address student's questions and reinforce key concepts.</p>
+                        <h3 class="timeline-title" data-i18n="exp1.title">Computer Science Tutor</h3>
+                        <p class="timeline-company" data-i18n="exp1.company">Caldwell University</p>
+                        <p class="timeline-date" data-i18n="exp1.date">March 2025 - Present</p>
+                        <p class="timeline-description" data-i18n="exp1.desc">Campus-certified tutor providing academic support in Programming I (Python), assisting students in developing coding proficiency and problem-solving skills. Conducted one-on-one sessions to address student's questions and reinforce key concepts.</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h3 class="timeline-title">Marketing Staff</h3>
-                        <p class="timeline-company">Earthbound Expeditions</p>
-                        <p class="timeline-date">November 2023 - June 2024</p>
-                        <p class="timeline-description">Communicated with clients via email and phone, ensuring timely and effective customer service. Managed bookings on platforms like Booking.com and GetYourGuide, streamlining reservation processes. Collaborated with the marketing team to develop promotional materials and improve outreach strategies.</p>
+                        <h3 class="timeline-title" data-i18n="exp2.title">Marketing Staff</h3>
+                        <p class="timeline-company" data-i18n="exp2.company">Earthbound Expeditions</p>
+                        <p class="timeline-date" data-i18n="exp2.date">November 2023 - June 2024</p>
+                        <p class="timeline-description" data-i18n="exp2.desc">Communicated with clients via email and phone, ensuring timely and effective customer service. Managed bookings on platforms like Booking.com and GetYourGuide, streamlining reservation processes. Collaborated with the marketing team to develop promotional materials and improve outreach strategies.</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
-                        <h3 class="timeline-title">High School Tutor</h3>
-                        <p class="timeline-company">Malpi Institute</p>
-                        <p class="timeline-date">March 2024</p>
-                        <p class="timeline-description">Provided tutoring support in AS and A-level subjects, helping students understand complex concepts and clear their doubts. Collaborated with teachers to grade student's test papers accurately and provide constructive feedback.</p>
+                        <h3 class="timeline-title" data-i18n="exp3.title">High School Tutor</h3>
+                        <p class="timeline-company" data-i18n="exp3.company">Malpi Institute</p>
+                        <p class="timeline-date" data-i18n="exp3.date">March 2024</p>
+                        <p class="timeline-description" data-i18n="exp3.desc">Provided tutoring support in AS and A-level subjects, helping students understand complex concepts and clear their doubts. Collaborated with teachers to grade student's test papers accurately and provide constructive feedback.</p>
                     </div>
                 </div>
             </div>
@@ -151,7 +160,7 @@
     <!-- Skills Section -->
     <section id="skills" class="section skills-section">
         <div class="container">
-            <h2 class="section-title">Skills</h2>
+            <h2 class="section-title" data-i18n="section.skills">Skills</h2>
             <div class="skills-grid" id="skillsGrid">
                 <div class="skill-card">
                     <div class="skill-icon"><i data-lucide="code-2" class="w-8 h-8" aria-hidden="true"></i></div>
@@ -216,13 +225,13 @@
     <!-- Projects Section -->
     <section id="projects" class="section projects-section">
         <div class="container">
-            <h2 class="section-title">Projects</h2>
+            <h2 class="section-title" data-i18n="section.projects">Projects</h2>
             <div class="projects-grid" id="projectsGrid">
                 <div class="project-card">
                     <div class="project-icon"><i data-lucide="utensils-crossed" class="w-10 h-10" aria-hidden="true"></i></div>
-                    <h3 class="project-name">Chef on Call</h3>
-                    <p class="project-date">March 2025</p>
-                    <p class="project-description">Home Chef Booking app - Conducted user research, created wireframes, and developed interactive prototypes to enhance user experience. Co-led the design and prototyping using Figma.</p>
+                    <h3 class="project-name" data-i18n="proj1.name">Chef on Call</h3>
+                    <p class="project-date" data-i18n="proj1.date">March 2025</p>
+                    <p class="project-description" data-i18n="proj1.desc">Home Chef Booking app - Conducted user research, created wireframes, and developed interactive prototypes to enhance user experience. Co-led the design and prototyping using Figma.</p>
                     <div class="project-tags">
                         <span class="project-tag">Figma</span>
                         <span class="project-tag">UI/UX</span>
@@ -231,9 +240,9 @@
                 </div>
                 <div class="project-card">
                     <div class="project-icon"><i data-lucide="scan-face" class="w-10 h-10" aria-hidden="true"></i></div>
-                    <h3 class="project-name">Face Filter</h3>
-                    <p class="project-date">March 2024</p>
-                    <p class="project-description">Created a Face filter program in Python using libraries like OpenCV and cvzone. Implemented real-time face detection and filter application.</p>
+                    <h3 class="project-name" data-i18n="proj2.name">Face Filter</h3>
+                    <p class="project-date" data-i18n="proj2.date">March 2024</p>
+                    <p class="project-description" data-i18n="proj2.desc">Created a Face filter program in Python using libraries like OpenCV and cvzone. Implemented real-time face detection and filter application.</p>
                     <div class="project-tags">
                         <span class="project-tag">Python</span>
                         <span class="project-tag">OpenCV</span>
@@ -242,9 +251,9 @@
                 </div>
                 <div class="project-card">
                     <div class="project-icon"><i data-lucide="mic" class="w-10 h-10" aria-hidden="true"></i></div>
-                    <h3 class="project-name">Voice Assistant</h3>
-                    <p class="project-date">June 2024</p>
-                    <p class="project-description">Created a Simple Voice Assistant program in Python using libraries like speech_recognition, pyttsx3, pywhatkit, and pyjokes. Features voice commands and responses.</p>
+                    <h3 class="project-name" data-i18n="proj3.name">Voice Assistant</h3>
+                    <p class="project-date" data-i18n="proj3.date">June 2024</p>
+                    <p class="project-description" data-i18n="proj3.desc">Created a Simple Voice Assistant program in Python using libraries like speech_recognition, pyttsx3, pywhatkit, and pyjokes. Features voice commands and responses.</p>
                     <div class="project-tags">
                         <span class="project-tag">Python</span>
                         <span class="project-tag">Speech Recognition</span>
@@ -253,9 +262,9 @@
                 </div>
                 <div class="project-card">
                     <div class="project-icon"><i data-lucide="eye" class="w-10 h-10" aria-hidden="true"></i></div>
-                    <h3 class="project-name">Face Detection</h3>
-                    <p class="project-date">June 2024</p>
-                    <p class="project-description">Created a Face Detection program in Python using libraries like OpenCV and matplotlib. Implemented real-time face detection with visualization capabilities.</p>
+                    <h3 class="project-name" data-i18n="proj4.name">Face Detection</h3>
+                    <p class="project-date" data-i18n="proj4.date">June 2024</p>
+                    <p class="project-description" data-i18n="proj4.desc">Created a Face Detection program in Python using libraries like OpenCV and matplotlib. Implemented real-time face detection with visualization capabilities.</p>
                     <div class="project-tags">
                         <span class="project-tag">Python</span>
                         <span class="project-tag">OpenCV</span>
@@ -269,19 +278,19 @@
     <!-- Video Section -->
     <section id="video" class="section video-section">
         <div class="container">
-            <h2 class="section-title">Favorite Video</h2>
+            <h2 class="section-title" data-i18n="section.video">Favorite Video</h2>
             <div class="video-container">
                 <div class="video-wrapper">
                     <iframe 
                         id="favoriteVideo"
                         src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
-                        title="Favorite Video" 
+                        title="Favorite Video" data-i18n-title="video.iframeTitle"
                         frameborder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                         allowfullscreen>
                     </iframe>
                 </div>
-                <p class="video-description">A video that inspires and motivates me. Replace the video ID in the code to add your own favorite YouTube video!</p>
+                <p class="video-description" data-i18n="video.desc">A video that inspires and motivates me. Replace the video ID in the code to add your own favorite YouTube video!</p>
             </div>
         </div>
     </section>
@@ -289,11 +298,11 @@
     <!-- Games Section -->
     <section id="games" class="section games-section">
         <div class="container">
-            <h2 class="section-title">Games</h2>
+            <h2 class="section-title" data-i18n="section.games">Games</h2>
             <div class="games-grid">
                 <!-- Tic Tac Toe Game -->
                 <div class="game-card">
-                    <h3 class="game-title">Tic Tac Toe</h3>
+                    <h3 class="game-title" data-i18n="game.ticTitle">Tic Tac Toe</h3>
                     <div class="game-container">
                         <div class="game-status" id="ticTacToeStatus">Player X's turn</div>
                         <div class="tic-tac-toe-board" id="ticTacToeBoard">
@@ -307,23 +316,23 @@
                             <div class="cell" data-index="7"></div>
                             <div class="cell" data-index="8"></div>
                         </div>
-                        <button class="game-reset-btn" id="ticTacToeReset">Reset Game</button>
+                        <button type="button" class="game-reset-btn" id="ticTacToeReset" data-i18n="game.ticReset">Reset Game</button>
                     </div>
                 </div>
 
                 <!-- Snake Game -->
                 <div class="game-card">
-                    <h3 class="game-title">Snake Game</h3>
+                    <h3 class="game-title" data-i18n="game.snakeTitle">Snake Game</h3>
                     <div class="game-container">
-                        <div class="game-score">Score: <span id="snakeScore">0</span></div>
+                        <div class="game-score"><span data-i18n="game.score">Score:</span> <span id="snakeScore">0</span></div>
                         <canvas id="snakeCanvas"></canvas>
                         <div class="game-controls">
                             <div class="game-buttons">
-                                <button class="game-start-btn" id="snakeStart">Start</button>
-                                <button class="game-stop-btn" id="snakeStop" style="display: none;">Stop</button>
-                                <button class="game-reset-btn" id="snakeReset">Reset</button>
+                                <button type="button" class="game-start-btn" id="snakeStart" data-i18n="game.snakeStart">Start</button>
+                                <button type="button" class="game-stop-btn" id="snakeStop" style="display: none;" data-i18n="game.snakeStop">Stop</button>
+                                <button type="button" class="game-reset-btn" id="snakeReset" data-i18n="game.snakeReset">Reset</button>
                             </div>
-                            <p class="game-instructions">Click Start, then use arrow keys to control the snake</p>
+                            <p class="game-instructions" data-i18n="game.snakeInstr">Click Start, then use arrow keys to control the snake</p>
                         </div>
                     </div>
                 </div>
@@ -334,13 +343,13 @@
     <!-- Interactive Tools Section -->
     <section class="section tools-section">
         <div class="container">
-            <h2 class="section-title">Interactive Tools</h2>
+            <h2 class="section-title" data-i18n="section.tools">Interactive Tools</h2>
             <div class="tools-grid">
                 <!-- Weather Widget -->
                 <div class="tool-card weather-card">
-                    <h3 class="tool-title">Weather</h3>
+                    <h3 class="tool-title" data-i18n="tool.weather">Weather</h3>
                     <div class="weather-widget" id="weatherWidget">
-                        <div class="weather-loading">Loading weather...</div>
+                        <div class="weather-loading" data-i18n="weather.loading">Loading weather...</div>
                         <div class="weather-content" style="display: none;">
                             <div class="weather-icon flex items-center justify-center" id="weatherIcon"><i data-lucide="sun" class="w-14 h-14" aria-hidden="true"></i></div>
                             <div class="weather-temp" id="weatherTemp">--°C</div>
@@ -348,11 +357,11 @@
                             <div class="weather-location" id="weatherLocation">--</div>
                             <div class="weather-details">
                                 <div class="weather-detail-item">
-                                    <span>Humidity:</span>
+                                    <span data-i18n="weather.humidityLabel">Humidity:</span>
                                     <span id="weatherHumidity">--%</span>
                                 </div>
                                 <div class="weather-detail-item">
-                                    <span>Wind:</span>
+                                    <span data-i18n="weather.windLabel">Wind:</span>
                                     <span id="weatherWind">-- km/h</span>
                                 </div>
                             </div>
@@ -362,10 +371,10 @@
 
                 <!-- Google Maps -->
                 <div class="tool-card maps-card">
-                    <h3 class="tool-title">Location</h3>
+                    <h3 class="tool-title" data-i18n="tool.location">Location</h3>
                     <div class="maps-widget" id="mapsWidget">
                         <div id="map" style="height: 300px; width: 100%; border-radius: 15px;"></div>
-                        <input type="text" id="locationInput" placeholder="Enter location..." class="location-input">
+                        <input type="text" id="locationInput" data-i18n-placeholder="maps.placeholder" placeholder="Enter location..." class="location-input">
                     </div>
                 </div>
             </div>
@@ -375,18 +384,18 @@
     <!-- Latest News Section -->
     <section id="news" class="section news-section">
         <div class="container">
-            <h2 class="section-title">Latest Tech News</h2>
-            <p class="news-subtitle">
+            <h2 class="section-title" data-i18n="section.news">Latest Tech News</h2>
+            <p class="news-subtitle" data-i18n="news.subtitle">
                 Fresh headlines from the tech world, updated automatically.
             </p>
             <div class="news-toolbar">
                 <div class="news-status" id="newsStatus">
                     <i data-lucide="newspaper" class="w-5 h-5" aria-hidden="true"></i>
-                    <span>Loading latest stories…</span>
+                    <span data-i18n="news.loading">Loading latest stories…</span>
                 </div>
-                <button class="btn btn-secondary news-refresh" id="newsRefresh" type="button">
+                <button type="button" class="btn btn-secondary news-refresh" id="newsRefresh">
                     <i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i>
-                    Refresh
+                    <span data-i18n="news.refresh">Refresh</span>
                 </button>
             </div>
             <div class="news-grid" id="newsGrid" aria-live="polite"></div>
@@ -396,37 +405,37 @@
     <!-- Contact Section -->
     <section id="contact" class="section contact-section">
         <div class="container">
-            <h2 class="section-title">Get In Touch</h2>
+            <h2 class="section-title" data-i18n="section.contact">Get In Touch</h2>
             <div class="contact-content">
                 <div class="contact-info">
                     <div class="contact-item">
                         <div class="contact-icon"><i data-lucide="mail" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
-                            <h4>Email</h4>
+                            <h4 data-i18n="contact.emailH">Email</h4>
                             <p id="userEmail">your.email@example.com</p>
                         </div>
                     </div>
                     <div class="contact-item">
                         <div class="contact-icon"><i data-lucide="smartphone" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
-                            <h4>Phone</h4>
+                            <h4 data-i18n="contact.phoneH">Phone</h4>
                             <p id="userPhone">+1 (555) 123-4567</p>
                         </div>
                     </div>
                     <div class="contact-item">
                         <div class="contact-icon"><i data-lucide="map-pin" class="w-6 h-6" aria-hidden="true"></i></div>
                         <div class="contact-details">
-                            <h4>Location</h4>
+                            <h4 data-i18n="contact.locH">Location</h4>
                             <p id="userLocation">Your City, Country</p>
                         </div>
                     </div>
                 </div>
                 <div class="contact-form-container">
                     <form class="contact-form" id="contactForm">
-                        <input type="text" placeholder="Your Name" required>
-                        <input type="email" placeholder="Your Email" required>
-                        <textarea placeholder="Your Message" rows="5" required></textarea>
-                        <button type="submit" class="btn btn-primary">Send Message</button>
+                        <input type="text" data-i18n-placeholder="form.namePh" placeholder="Your Name" required>
+                        <input type="email" data-i18n-placeholder="form.emailPh" placeholder="Your Email" required>
+                        <textarea data-i18n-placeholder="form.msgPh" placeholder="Your Message" rows="5" required></textarea>
+                        <button type="submit" class="btn btn-primary" data-i18n="form.send">Send Message</button>
                     </form>
                 </div>
             </div>
@@ -436,31 +445,31 @@
     <!-- Call Section -->
     <section id="call" class="section call-section">
         <div class="container">
-            <h2 class="section-title">Live Video Call</h2>
+            <h2 class="section-title" data-i18n="section.call">Live Video Call</h2>
             <div class="call-grid">
                 <div class="call-panel">
-                    <h3 class="call-title">Call the Owner (PIN)</h3>
-                    <p class="call-desc">
+                    <h3 class="call-title" data-i18n="call.cardTitle">Call the Owner (PIN)</h3>
+                    <p class="call-desc" data-i18n-html="call.desc">
                         One person clicks <strong>Host</strong> and shares the 6‑digit PIN. The other person clicks <strong>Join</strong> with the same PIN to start a private video call.
                     </p>
                     <div class="call-pin-row">
-                        <input id="callPin" class="call-pin-input" maxlength="6" placeholder="123456">
-                        <button id="callCreate" class="btn btn-primary">Host</button>
-                        <button id="callJoin" class="btn btn-secondary">Join</button>
+                        <input id="callPin" class="call-pin-input" maxlength="6" data-i18n-placeholder="call.pinPh" placeholder="123456">
+                        <button type="button" id="callCreate" class="btn btn-primary" data-i18n="call.host">Host</button>
+                        <button type="button" id="callJoin" class="btn btn-secondary" data-i18n="call.join">Join</button>
                     </div>
                     <p id="callStatus" class="call-status"></p>
                 </div>
                 <div class="call-video-panel">
                     <div class="call-video-wrapper">
-                        <h4>Me</h4>
+                        <h4 data-i18n="call.me">Me</h4>
                         <video id="localVideo" class="call-video" autoplay playsinline muted></video>
                     </div>
                     <div class="call-video-wrapper">
-                        <h4>Guest</h4>
+                        <h4 data-i18n="call.guest">Guest</h4>
                         <video id="remoteVideo" class="call-video" autoplay playsinline></video>
                     </div>
                     <div class="call-controls">
-                        <button id="callHangup" class="btn call-hangup" disabled>Hang up</button>
+                        <button type="button" id="callHangup" class="btn call-hangup" disabled data-i18n="call.hangup">Hang up</button>
                     </div>
                 </div>
             </div>
@@ -469,7 +478,7 @@
 
     <!-- Chatbot -->
     <div class="chatbot-container" id="chatbotContainer">
-        <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" aria-label="Open chat">
+        <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" data-i18n-aria="chatbot.openAria" aria-label="Open chat">
             <i data-lucide="message-circle" class="chat-icon w-7 h-7" aria-hidden="true"></i>
         </div>
         <div class="chatbot-window" id="chatbotWindow">
@@ -478,28 +487,28 @@
                     <span class="chatbot-header-ai-icon" aria-hidden="true">
                         <i data-lucide="sparkles"></i>
                     </span>
-                    <h3>Chat Assistant</h3>
+                    <h3 data-i18n="chatbot.header">Chat Assistant</h3>
                 </div>
-                <button class="chatbot-close" id="chatbotClose" onclick="closeChatbot()">×</button>
+                <button type="button" class="chatbot-close" id="chatbotClose" onclick="closeChatbot()">×</button>
             </div>
             <div class="chatbot-messages" id="chatbotMessages">
                 <div class="chat-message bot-message">
-                    <div class="message-content">
+                    <div class="message-content" id="chatbotWelcomeText" data-i18n-html="chatbot.welcome">
                         Hello! I'm here to answer questions about Digvijay Simkhada. Ask me about education, experience, projects, skills, certificates, or contact information!
                     </div>
                 </div>
             </div>
             <div class="chatbot-input-container">
-                <input type="text" id="chatbotInput" placeholder="Type or use mic..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
-                <button type="button" id="chatbotCall" class="chatbot-call" title="Start a call" onclick="chatbotQuickCall()" aria-label="Start a call">
+                <input type="text" id="chatbotInput" data-i18n-placeholder="chatbot.placeholder" placeholder="Type or use mic..." class="chatbot-input" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button type="button" id="chatbotCall" class="chatbot-call" data-i18n-title="chatbot.callTitle" title="Start a call" onclick="chatbotQuickCall()" data-i18n-aria="chatbot.callTitle" aria-label="Start a call">
                     <i data-lucide="phone-call" class="w-5 h-5" aria-hidden="true"></i>
                 </button>
-                <button type="button" id="chatbotMic" class="chatbot-mic" title="Voice input" onclick="toggleVoiceInput()" aria-label="Voice input">
+                <button type="button" id="chatbotMic" class="chatbot-mic" data-i18n-title="chatbot.micTitle" title="Voice input" onclick="toggleVoiceInput()" data-i18n-aria="chatbot.micTitle" aria-label="Voice input">
                     <i data-lucide="mic" class="mic-icon w-5 h-5" aria-hidden="true"></i>
                 </button>
-                <button id="chatbotSend" class="chatbot-send" onclick="sendChatMessage()">Send</button>
+                <button type="button" id="chatbotSend" class="chatbot-send" onclick="sendChatMessage()" data-i18n="chatbot.send">Send</button>
             </div>
-            <div class="chatbot-voice-status" id="chatbotVoiceStatus" style="display: none;">Listening...</div>
+            <div class="chatbot-voice-status" id="chatbotVoiceStatus" style="display: none;" data-i18n="chatbot.listening">Listening...</div>
         </div>
     </div>
 
@@ -520,7 +529,7 @@
                     Email
                 </a>
             </div>
-            <p>&copy; 2024 Your Name. All rights reserved.</p>
+            <p id="footerCopyright" data-i18n-template="footer.copy">&copy; 2024 Your Name. All rights reserved.</p>
         </div>
     </footer>
 
@@ -531,6 +540,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
     <!-- Anam AI avatar: set CONFIG.anamPersonaId in script.js (create persona + knowledge at https://lab.anam.ai) -->
+    <script src="i18n.js"></script>
     <script src="script.js"></script>
     <!-- Google Maps API key: replace the key= value below with your own key from Google Cloud Console -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsrKefIopd3z2J4-b0guc-T47c7FYbLco&callback=initMap" async defer></script>
