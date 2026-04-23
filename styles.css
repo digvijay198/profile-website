@@ -98,6 +98,41 @@ body.theme-night {
     background: radial-gradient(circle at 70% 20%, rgba(253, 224, 71, 0.15) 0%, transparent 45%);
 }
 
+/* Night: milky band + nebula (hidden in day) */
+.bg-galaxy {
+    position: absolute;
+    inset: -25%;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 1.2s ease, visibility 1.2s ease;
+    background:
+        radial-gradient(ellipse 100% 45% at 50% 115%, rgba(88, 28, 135, 0.45) 0%, transparent 58%),
+        radial-gradient(ellipse 70% 50% at 18% 35%, rgba(49, 46, 129, 0.35) 0%, transparent 52%),
+        radial-gradient(ellipse 55% 40% at 88% 22%, rgba(126, 34, 206, 0.28) 0%, transparent 48%),
+        radial-gradient(ellipse 90% 25% at 45% 8%, rgba(30, 64, 175, 0.22) 0%, transparent 55%),
+        linear-gradient(165deg, transparent 0%, rgba(15, 23, 42, 0.2) 40%, rgba(30, 27, 75, 0.35) 50%, rgba(15, 23, 42, 0.25) 60%, transparent 100%);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 120% 120%, 100% 100%;
+    animation: galaxyDrift 90s ease-in-out infinite alternate;
+    filter: blur(0.5px);
+}
+
+.animated-bg.theme-night .bg-galaxy {
+    opacity: 1;
+    visibility: visible;
+}
+
+@keyframes galaxyDrift {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+    }
+    100% {
+        transform: translate(-2%, -1.5%) rotate(2deg) scale(1.03);
+        background-position: 3% 2%, -2% 1%, 2% -1%, 4% 3%, 0% 0%;
+    }
+}
+
 .bg-sun {
     position: absolute;
     top: 12%;
@@ -191,6 +226,273 @@ body.theme-night {
 
 .animated-bg.theme-night .bg-stars {
     opacity: 1;
+}
+
+/* Deeper star layer + faint drift (night only) */
+.bg-stars-deep {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 1s ease, visibility 1s ease;
+    background-image:
+        radial-gradient(1px 1px at 8% 12%, rgba(255, 255, 255, 0.95), transparent),
+        radial-gradient(1px 1px at 22% 8%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 35% 22%, rgba(226, 232, 240, 0.9), transparent),
+        radial-gradient(1px 1px at 48% 6%, rgba(255, 255, 255, 0.85), transparent),
+        radial-gradient(1px 1px at 62% 18%, rgba(199, 210, 254, 0.9), transparent),
+        radial-gradient(1px 1px at 78% 11%, rgba(255, 255, 255, 0.75), transparent),
+        radial-gradient(1px 1px at 92% 28%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 15% 38%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 42% 44%, rgba(224, 231, 255, 0.85), transparent),
+        radial-gradient(1px 1px at 68% 36%, rgba(255, 255, 255, 0.65), transparent),
+        radial-gradient(1px 1px at 88% 42%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 5% 55%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 28% 62%, rgba(238, 242, 255, 0.75), transparent),
+        radial-gradient(1px 1px at 55% 58%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 72% 68%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1px 1px at 95% 52%, rgba(255, 255, 255, 0.65), transparent),
+        radial-gradient(1px 1px at 12% 78%, rgba(199, 210, 254, 0.6), transparent),
+        radial-gradient(1px 1px at 38% 88%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 58% 82%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1px 1px at 85% 76%, rgba(224, 231, 255, 0.6), transparent);
+    background-size: 110% 110%;
+    background-position: 0 0, 30px 20px, 60px 40px, 90px 15px, 120px 55px, 150px 30px, 180px 70px,
+        20px 90px, 50px 100px, 80px 85px, 110px 95px, 140px 80px,
+        10px 120px, 40px 140px, 70px 130px, 100px 150px, 130px 125px,
+        25px 160px, 55px 175px, 85px 165px, 115px 180px;
+    animation: starsParallax 120s linear infinite, twinkle 4.5s ease-in-out infinite;
+}
+
+.animated-bg.theme-night .bg-stars-deep {
+    opacity: 0.95;
+    visibility: visible;
+}
+
+@keyframes starsParallax {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-2%, -1%); }
+}
+
+/* Day: birds flying across the sky */
+.bg-birds {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.9s ease, visibility 0.9s ease;
+}
+
+.animated-bg.theme-day .bg-birds {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Wrapper = horizontal flight; inner .bird = silhouette + bob + scale */
+.bird-wrap {
+    position: absolute;
+    left: -10%;
+    width: 24px;
+    height: 14px;
+    will-change: left;
+}
+
+.bird-wrap .bird {
+    position: relative;
+    width: 18px;
+    height: 10px;
+    opacity: 0.55;
+}
+
+.bird::before,
+.bird::after {
+    content: "";
+    position: absolute;
+    width: 55%;
+    height: 3px;
+    top: 4px;
+    background: linear-gradient(90deg, rgba(12, 74, 110, 0.95), rgba(8, 47, 73, 0.85));
+    border-radius: 50% 40% 0 40%;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.bird::before {
+    left: 0;
+    transform-origin: 100% 50%;
+    transform: rotate(-38deg);
+}
+
+.bird::after {
+    right: 0;
+    transform-origin: 0% 50%;
+    transform: rotate(38deg);
+}
+
+body.theme-day .bird::before,
+body.theme-day .bird::after {
+    background: linear-gradient(90deg, rgba(14, 116, 144, 0.9), rgba(8, 51, 68, 0.85));
+}
+
+.bird-wrap-1 {
+    top: 18%;
+    animation: birdFlySlow 44s linear infinite;
+    animation-delay: -6s;
+}
+
+.bird-wrap-1 .bird {
+    animation: birdBobScale88 3.2s ease-in-out infinite;
+}
+
+.bird-wrap-2 {
+    top: 26%;
+    animation: birdFlyFast 52s linear infinite;
+    animation-delay: -20s;
+}
+
+.bird-wrap-2 .bird {
+    opacity: 0.42;
+    animation: birdBobScale62Flip 2.8s ease-in-out infinite;
+}
+
+.bird-wrap-3 {
+    top: 13%;
+    animation: birdFlySlow 34s linear infinite;
+    animation-delay: -3s;
+}
+
+.bird-wrap-3 .bird {
+    animation: birdBobScale105 3.4s ease-in-out infinite;
+}
+
+.bird-wrap-4 {
+    top: 33%;
+    animation: birdFlyFast 66s linear infinite;
+    animation-delay: -30s;
+}
+
+.bird-wrap-4 .bird {
+    opacity: 0.36;
+    animation: birdBobScale52 4s ease-in-out infinite;
+}
+
+.bird-wrap-5 {
+    top: 22%;
+    animation: birdFlySlow 48s linear infinite;
+    animation-delay: -14s;
+}
+
+.bird-wrap-5 .bird {
+    opacity: 0.48;
+    animation: birdBobScale72Flip 3s ease-in-out infinite;
+}
+
+.bird-wrap-6 {
+    top: 39%;
+    animation: birdFlyFast 58s linear infinite;
+    animation-delay: -38s;
+}
+
+.bird-wrap-6 .bird {
+    opacity: 0.34;
+    animation: birdBobScale48 3.5s ease-in-out infinite;
+}
+
+@keyframes birdFlySlow {
+    0% {
+        left: -10%;
+    }
+    100% {
+        left: 110%;
+    }
+}
+
+@keyframes birdFlyFast {
+    0% {
+        left: -14%;
+    }
+    100% {
+        left: 114%;
+    }
+}
+
+@keyframes birdBobScale88 {
+    0%,
+    100% {
+        transform: translateY(0) scale(0.88);
+    }
+    50% {
+        transform: translateY(-7px) scale(0.88);
+    }
+}
+
+@keyframes birdBobScale62Flip {
+    0%,
+    100% {
+        transform: translateY(0) scale(0.62) scaleX(-1);
+    }
+    50% {
+        transform: translateY(8px) scale(0.62) scaleX(-1);
+    }
+}
+
+@keyframes birdBobScale105 {
+    0%,
+    100% {
+        transform: translateY(0) scale(1.05);
+    }
+    50% {
+        transform: translateY(9px) scale(1.05);
+    }
+}
+
+@keyframes birdBobScale52 {
+    0%,
+    100% {
+        transform: translateY(0) scale(0.52);
+    }
+    50% {
+        transform: translateY(-5px) scale(0.52);
+    }
+}
+
+@keyframes birdBobScale72Flip {
+    0%,
+    100% {
+        transform: translateY(0) scale(0.72) scaleX(-1);
+    }
+    50% {
+        transform: translateY(-6px) scale(0.72) scaleX(-1);
+    }
+}
+
+@keyframes birdBobScale48 {
+    0%,
+    100% {
+        transform: translateY(0) scale(0.48);
+    }
+    50% {
+        transform: translateY(7px) scale(0.48);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-galaxy,
+    .bg-stars,
+    .bg-stars-deep,
+    .bird-wrap,
+    .bird-wrap .bird {
+        animation: none !important;
+    }
+
+    .animated-bg.theme-night .bg-stars-deep {
+        transform: none;
+    }
 }
 
 @keyframes twinkle {
