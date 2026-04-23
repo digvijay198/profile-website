@@ -39,6 +39,11 @@ const CONFIG = {
   // Anam: assistant can trigger new-tab searches via magic tags (see attachAnamExternalSearchListener).
   anamOpenGoogleFromMessages: true,
 
+  // Gemini (ChatGPT-style chat in the panel). API key only on the server: GEMINI_API_KEY in Vercel / .env.local
+  useGeminiWhenAvailable: true,
+  geminiModel: "gemini-2.0-flash",
+  geminiChatAvailable: false,
+
   // Rich knowledge base: many ways to ask map to the same answers (longer phrases first for matching)
   knowledgeBase: {
       // Greetings & intro
@@ -1265,9 +1270,124 @@ function initializeChatbot() {
   input.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      sendChatMessage();
+      void sendChatMessage();
     }
   });
+  void hydrateChatConfig();
+}
+
+let _chatConfigPromise = null;
+
+async function hydrateChatConfig() {
+  if (_chatConfigPromise) return _chatConfigPromise;
+  _chatConfigPromise = (async () => {
+    try {
+      const r = await fetch("/api/site-config");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (typeof d.geminiChatAvailable === "boolean") {
+        CONFIG.geminiChatAvailable = d.geminiChatAvailable;
+      }
+      if (d.geminiModel) CONFIG.geminiModel = String(d.geminiModel).trim() || CONFIG.geminiModel;
+    } catch (_) {
+      /* offline or static hosting */
+    }
+  })();
+  return _chatConfigPromise;
+}
+
+async function ensureChatConfig() {
+  await hydrateChatConfig();
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Safe HTML for Gemini replies: ``` code ```, **bold**, newlines */
+function formatAssistantMessage(text) {
+  const segments = String(text).split("```");
+  let out = "";
+  for (let i = 0; i < segments.length; i++) {
+    if (i % 2 === 0) {
+      let seg = escapeHtml(segments[i]);
+      seg = seg.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      seg = seg.replace(/\n/g, "<br>");
+      out += seg;
+    } else {
+      const block = segments[i].replace(/^\w*\n?/, "").replace(/\n$/, "");
+      out += '<pre class="chat-pre"><code>' + escapeHtml(block) + "</code></pre>";
+    }
+  }
+  return out || "<p><em>(empty reply)</em></p>";
+}
+
+function showChatTypingIndicator() {
+  const messagesContainer = document.getElementById("chatbotMessages");
+  if (!messagesContainer) return { remove() {} };
+  const div = document.createElement("div");
+  div.className = "chat-message bot-message chatbot-typing-row";
+  const label = typeof siteT === "function" ? siteT("chatbot.thinking") : "Thinking";
+  div.innerHTML = `<div class="message-content chatbot-typing-inner"><span class="typing-label">${escapeHtml(label)}</span><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  messagesContainer.appendChild(div);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  return {
+    remove() {
+      div.remove();
+    }
+  };
+}
+
+async function sendGeminiChat(userText) {
+  const history = window.__geminiChatHistory || (window.__geminiChatHistory = []);
+  history.push({ role: "user", content: userText });
+
+  const input = document.getElementById("chatbotInput");
+  const sendBtn = document.getElementById("chatbotSend");
+  const typing = showChatTypingIndicator();
+  if (sendBtn) sendBtn.disabled = true;
+  if (input) input.disabled = true;
+
+  try {
+    const res = await fetch("/api/gemini-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: CONFIG.geminiModel || "gemini-2.0-flash",
+        messages: history.slice(-24)
+      })
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {}
+
+    if (!res.ok) {
+      history.pop();
+      const hint = data.error || data.details || res.statusText || "Error";
+      addMessageToChat(`${siteT("chatbot.aiError")} (${escapeHtml(String(hint).slice(0, 180))})`, "bot-message", false);
+      return;
+    }
+
+    const text = typeof data.text === "string" ? data.text : "";
+    history.push({ role: "assistant", content: text });
+    addMessageToChat(formatAssistantMessage(text), "bot-message", true);
+  } catch (_) {
+    history.pop();
+    addMessageToChat(siteT("chatbot.aiError"), "bot-message", false);
+  } finally {
+    typing.remove();
+    if (sendBtn) sendBtn.disabled = false;
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
+  }
 }
 
 // Voice input (Web Speech API) - optimized
@@ -1318,7 +1438,7 @@ function toggleVoiceInput() {
     if (text.length >= 2) {
       input.value = text;
       input.focus();
-      setTimeout(() => sendChatMessage(), 400);
+      setTimeout(() => void sendChatMessage(), 400);
     }
   };
 
@@ -1466,22 +1586,22 @@ async function chatbotCopyPin(pin) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(p);
-      addMessageToChat("PIN copied to clipboard.", "bot-message");
+      addMessageToChat("PIN copied to clipboard.", "bot-message", false);
       return;
     }
   } catch (_) {}
-  addMessageToChat(`Copy this PIN: <b>${p}</b>`, "bot-message");
+  addMessageToChat(`Copy this PIN: <b>${p}</b>`, "bot-message", true);
 }
 window.chatbotCopyPin = chatbotCopyPin;
 
 function chatbotQuickCall() {
   const pin = generateFourDigitPin();
   window._chatbotLastCallPin = pin;
-  addMessageToChat(buildChatbotCallMessage(pin), "bot-message");
+  addMessageToChat(buildChatbotCallMessage(pin), "bot-message", true);
 }
 window.chatbotQuickCall = chatbotQuickCall;
 
-function sendChatMessage() {
+async function sendChatMessage() {
   const input = document.getElementById("chatbotInput");
   const messagesContainer = document.getElementById("chatbotMessages");
   if (!input || !messagesContainer) return;
@@ -1489,31 +1609,46 @@ function sendChatMessage() {
   const userText = input.value.trim();
   if (!userText) return;
 
-  addMessageToChat(userText, "user-message");
+  addMessageToChat(userText, "user-message", false);
   input.value = "";
 
   const lowerText = userText.toLowerCase().trim();
-  let botResponse = getChatbotResponse(userText);
   const controlResult = handleChatbotControl(lowerText, userText);
-  if (controlResult?.botResponseOverride) botResponse = controlResult.botResponseOverride;
+  if (controlResult?.botResponseOverride) {
+    addMessageToChat(controlResult.botResponseOverride, "bot-message", true);
+    return;
+  }
 
-  addMessageToChat(botResponse, "bot-message");
+  await ensureChatConfig();
+
+  if (CONFIG.useGeminiWhenAvailable && CONFIG.geminiChatAvailable) {
+    await sendGeminiChat(userText);
+    return;
+  }
+
+  const botResponse = getChatbotResponse(userText);
+  addMessageToChat(botResponse, "bot-message", true);
 }
 window.sendChatMessage = sendChatMessage;
 
-function addMessageToChat(text, className) {
+/**
+ * @param {string} text
+ * @param {string} className
+ * @param {boolean} trustedHtml - if false, escape HTML and preserve newlines as <br>
+ */
+function addMessageToChat(text, className, trustedHtml = false) {
   const messagesContainer = document.getElementById("chatbotMessages");
   if (!messagesContainer) return;
 
+  const inner = trustedHtml ? text : escapeHtml(text).replace(/\n/g, "<br>");
+
   const messageDiv = document.createElement("div");
   messageDiv.className = `chat-message ${className}`;
-  messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+  messageDiv.innerHTML = `<div class="message-content${trustedHtml ? " message-content-rich" : ""}">${inner}</div>`;
   messagesContainer.appendChild(messageDiv);
 
-  // Auto-scroll to bottom
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-  // If icons appear inside chat bubbles, render them
   if (typeof createLucideIcons === "function") createLucideIcons();
 }
 

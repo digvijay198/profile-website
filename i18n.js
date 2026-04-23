@@ -115,6 +115,8 @@
     "chatbot.header": "Chat Assistant",
     "chatbot.placeholder": "Type or use mic...",
     "chatbot.send": "Send",
+    "chatbot.thinking": "Thinking",
+    "chatbot.aiError": "Could not reach the AI. Deploy with GEMINI_API_KEY on Vercel or try again later.",
     "chatbot.welcome":
       "Hello! I'm here to answer questions about Digvijay Simkhada. Ask me about education, experience, projects, skills, certificates, or contact information!",
     "chatbot.callTitle": "Start a call",

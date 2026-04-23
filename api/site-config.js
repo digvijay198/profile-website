@@ -18,7 +18,10 @@ module.exports = async function handler(req, res) {
   }
 
   const id = (process.env.ANAM_PERSONA_ID || "").trim();
+  const geminiKey = (process.env.GEMINI_API_KEY || "").trim();
   res.status(200).json({
-    anamPersonaId: id
+    anamPersonaId: id,
+    geminiChatAvailable: Boolean(geminiKey),
+    geminiModel: (process.env.GEMINI_MODEL || "gemini-2.0-flash").trim()
   });
 };
