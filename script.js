@@ -1353,14 +1353,18 @@ async function sendGeminiChat(userText) {
   if (input) input.disabled = true;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch("/api/gemini-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: CONFIG.geminiModel || "gemini-2.0-flash",
         messages: history.slice(-24)
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
 
     let data = {};
     try {
@@ -1377,9 +1381,13 @@ async function sendGeminiChat(userText) {
     const text = typeof data.text === "string" ? data.text : "";
     history.push({ role: "assistant", content: text });
     addMessageToChat(formatAssistantMessage(text), "bot-message", true);
-  } catch (_) {
+  } catch (err) {
     history.pop();
-    addMessageToChat(siteT("chatbot.aiError"), "bot-message", false);
+    if (err && err.name === "AbortError") {
+      addMessageToChat("The AI response timed out. Please try again.", "bot-message", false);
+    } else {
+      addMessageToChat(siteT("chatbot.aiError"), "bot-message", false);
+    }
   } finally {
     typing.remove();
     if (sendBtn) sendBtn.disabled = false;
@@ -1918,19 +1926,35 @@ function setThemeColor(colorKey) {
 window.setThemeColor = setThemeColor;
 
 // #region agent log
+const ENABLE_LOCAL_DEBUG_LOGS = false;
+
 function debugLogControl(hypothesisId, message, data) {
-  fetch("http://127.0.0.1:7242/ingest/df512b59-c458-4821-b065-7e693904603e", {
+  if (!ENABLE_LOCAL_DEBUG_LOGS) return;
+
+  const endpoint = "http://127.0.0.1:7242/ingest/df512b59-c458-4821-b065-7e693904603e";
+  const payload = JSON.stringify({
+    id: `log_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    timestamp: Date.now(),
+    location: "script.js:chatbot-control",
+    runId: "initial-feature",
+    hypothesisId,
+    message,
+    data
+  });
+
+  try {
+    if (navigator && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon(endpoint, blob);
+      return;
+    }
+  } catch (_) {}
+
+  fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: `log_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-      timestamp: Date.now(),
-      location: "script.js:chatbot-control",
-      runId: "initial-feature",
-      hypothesisId,
-      message,
-      data
-    })
+    body: payload,
+    keepalive: true
   }).catch(() => {});
 }
 // #endregion
