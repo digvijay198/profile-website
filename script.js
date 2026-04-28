@@ -626,6 +626,24 @@ async function mountAnamWidget({ personaId, sessionToken }) {
   attachAnamExternalSearchListener(agent);
 
   mount.appendChild(agent);
+
+  // Watchdog: if widget mounted but remains zero-sized (common when CDN/web-component partially fails),
+  // retry once with clean state.
+  setTimeout(() => {
+    const el = document.querySelector("anam-agent");
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const invisible = box.width < 16 || box.height < 16;
+    if (!invisible || window.__anamWidgetRetried) return;
+
+    console.warn("Anam widget appears mounted but not visible. Retrying mount once.");
+    window.__anamWidgetRetried = true;
+    window.__anamWidgetInit = false;
+    try {
+      document.getElementById("anamWidgetMount")?.remove();
+    } catch (_) {}
+    void mountAnamWidget({ personaId: id, sessionToken: token });
+  }, 5000);
 }
 
 async function initializeAnamWidget() {

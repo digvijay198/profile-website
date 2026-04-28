@@ -1965,6 +1965,12 @@ body.theme-day .call-troubleshoot code {
     z-index: 3000;
 }
 
+/* Extra guard so third-party widget cannot sit behind overlays */
+anam-agent {
+    position: fixed !important;
+    z-index: 3001 !important;
+}
+
 /* ============================================
    CHATBOT
    ============================================ */
