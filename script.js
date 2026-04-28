@@ -517,11 +517,91 @@ function attachAnamExternalSearchListener(_agentEl) {
  * Production: GET /api/anam-session mints session-token (ANAM_API_KEY + ANAM_PERSONA_ID on server).
  * Fallback: agent-id from CONFIG or /api/site-config (Lab domain allowlist).
  */
-function mountAnamWidget({ personaId, sessionToken }) {
+let anamWidgetScriptPromise = null;
+
+function ensureAnamWidgetScriptLoaded() {
+  if (typeof customElements !== "undefined" && customElements.get("anam-agent")) {
+    return Promise.resolve();
+  }
+  if (anamWidgetScriptPromise) return anamWidgetScriptPromise;
+
+  const sources = [
+    { src: "https://unpkg.com/@anam-ai/agent-widget", type: "module" },
+    { src: "https://cdn.jsdelivr.net/npm/@anam-ai/agent-widget", type: "module" },
+    // Fallback in case CDN serves non-module build.
+    { src: "https://unpkg.com/@anam-ai/agent-widget", type: "classic" },
+    { src: "https://cdn.jsdelivr.net/npm/@anam-ai/agent-widget", type: "classic" }
+  ];
+
+  anamWidgetScriptPromise = new Promise((resolve, reject) => {
+    let idx = 0;
+    const waitForDefinition = (ms) =>
+      new Promise((resolve, reject) => {
+        if (typeof customElements !== "undefined" && customElements.get("anam-agent")) {
+          resolve();
+          return;
+        }
+        const t = setTimeout(() => reject(new Error("anam-agent custom element not defined after script load")), ms);
+        if (typeof customElements !== "undefined" && typeof customElements.whenDefined === "function") {
+          customElements
+            .whenDefined("anam-agent")
+            .then(() => {
+              clearTimeout(t);
+              resolve();
+            })
+            .catch(() => {
+              clearTimeout(t);
+              reject(new Error("customElements.whenDefined failed for anam-agent"));
+            });
+        }
+      });
+
+    const tryNext = () => {
+      if (idx >= sources.length) {
+        reject(new Error("Failed to load @anam-ai/agent-widget from all CDNs"));
+        return;
+      }
+      const entry = sources[idx++];
+      const s = document.createElement("script");
+      s.src = entry.src;
+      if (entry.type === "module") s.type = "module";
+      s.async = true;
+      s.onload = async () => {
+        try {
+          await waitForDefinition(8000);
+          resolve();
+        } catch (e) {
+          console.warn("Anam widget loaded but element not defined, retrying:", entry.src, entry.type, e);
+          s.remove();
+          tryNext();
+        }
+      };
+      s.onerror = () => {
+        console.warn("Anam widget script failed, retrying:", entry.src, entry.type);
+        s.remove();
+        tryNext();
+      };
+      document.body.appendChild(s);
+    };
+    tryNext();
+  });
+
+  return anamWidgetScriptPromise;
+}
+
+async function mountAnamWidget({ personaId, sessionToken }) {
   const id = typeof personaId === "string" ? personaId.trim() : "";
   const token = typeof sessionToken === "string" ? sessionToken.trim() : "";
   if (window.__anamWidgetInit) return;
   if (!token && !id) return;
+
+  try {
+    await ensureAnamWidgetScriptLoaded();
+  } catch (e) {
+    console.error("Anam widget script failed to load.", e);
+    return;
+  }
+
   window.__anamWidgetInit = true;
 
   const mount = document.createElement("div");
@@ -546,28 +626,31 @@ function mountAnamWidget({ personaId, sessionToken }) {
   attachAnamExternalSearchListener(agent);
 
   mount.appendChild(agent);
-
-  const script = document.createElement("script");
-  script.src = "https://unpkg.com/@anam-ai/agent-widget";
-  script.async = true;
-  document.body.appendChild(script);
 }
 
 async function initializeAnamWidget() {
+  const cfgId = typeof CONFIG.anamPersonaId === "string" ? CONFIG.anamPersonaId.trim() : "";
+  if (!cfgId) {
+    console.warn("Anam: CONFIG.anamPersonaId is empty; relying on /api/site-config fallback.");
+  }
+
   try {
     const sessionRes = await fetch("/api/anam-session");
     if (sessionRes.ok) {
       const sessionData = await sessionRes.json();
       if (sessionData && sessionData.sessionToken) {
-        mountAnamWidget({ sessionToken: sessionData.sessionToken });
+        await mountAnamWidget({ sessionToken: sessionData.sessionToken });
         return;
+      }
+      if (sessionData && sessionData.error) {
+        console.warn("Anam: /api/anam-session responded without token:", sessionData.error);
       }
     }
   } catch (e) {
     console.warn("Anam: /api/anam-session unavailable.", e);
   }
 
-  let id = typeof CONFIG.anamPersonaId === "string" ? CONFIG.anamPersonaId.trim() : "";
+  let id = cfgId;
   if (!id) {
     try {
       const res = await fetch("/api/site-config");
@@ -579,7 +662,11 @@ async function initializeAnamWidget() {
       console.warn("Anam: /api/site-config unavailable (use CONFIG.anamPersonaId or deploy with ANAM_PERSONA_ID).", e);
     }
   }
-  mountAnamWidget({ personaId: id });
+  if (!id) {
+    console.error("Anam: no persona id available (CONFIG + /api/site-config both empty).");
+    return;
+  }
+  await mountAnamWidget({ personaId: id });
 }
 
 // ============================================

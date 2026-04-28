@@ -1962,7 +1962,7 @@ body.theme-day .call-troubleshoot code {
 
 #anamWidgetMount {
     position: relative;
-    z-index: 999;
+    z-index: 3000;
 }
 
 /* ============================================
