@@ -470,6 +470,124 @@ function anamProcessAssistantTextForExternalLinks(text) {
   }
 }
 
+function anamSetCallPin(pinLike) {
+  const pin = String(pinLike || "").replace(/\D/g, "").slice(0, 6);
+  const input = document.getElementById("callPin");
+  if (input && pin) input.value = pin;
+  return pin;
+}
+
+function anamOpenResume() {
+  const link = String(CONFIG.resumeLink || "").trim();
+  if (!link || link === "#") return false;
+  if (/^https?:\/\//i.test(link)) return anamOpenUrlSafe(link);
+  const url = new URL(link, window.location.href).href;
+  return anamOpenUrlSafe(url);
+}
+
+/**
+ * Site automation tags (agent actions).
+ * Supported:
+ * [[SCROLL_TO:home|about|experience|skills|projects|video|games|news|contact|call]]
+ * [[THEME:blue|purple|pink|green|red|navy|teal|orange|yellow]]
+ * [[MUSIC:PLAY]] [[MUSIC:PAUSE]]
+ * [[CALL:OPEN]] [[CALL:PIN:1234]] [[CALL:HOST:1234]] [[CALL:JOIN:1234]]
+ * [[LANGUAGE:en|es|ne|hi|zh]]
+ * [[OPEN_RESUME]]
+ * [[OPEN_CHATBOT]]
+ * [[REFRESH_NEWS]]
+ * [[MAP_SEARCH:Tokyo]]
+ */
+function anamProcessAssistantTextForSiteCommands(text) {
+  if (typeof text !== "string" || !text.includes("[[")) return;
+  let m;
+
+  const reScroll = /\[\[SCROLL_TO:([a-z0-9_-]{2,20})\]\]/gi;
+  while ((m = reScroll.exec(text)) !== null) {
+    const section = String(m[1] || "").toLowerCase();
+    if (typeof window.scrollToSection === "function") window.scrollToSection(section);
+  }
+
+  const reTheme = /\[\[THEME:([a-z]{3,12})\]\]/gi;
+  while ((m = reTheme.exec(text)) !== null) {
+    const color = String(m[1] || "").toLowerCase();
+    if (typeof window.setThemeColor === "function") window.setThemeColor(color);
+  }
+
+  const reMusic = /\[\[MUSIC:(PLAY|PAUSE|ON|OFF)\]\]/gi;
+  while ((m = reMusic.exec(text)) !== null) {
+    const cmd = String(m[1] || "").toUpperCase();
+    if ((cmd === "PLAY" || cmd === "ON") && typeof window.playBackgroundMusic === "function") {
+      void window.playBackgroundMusic();
+    }
+    if ((cmd === "PAUSE" || cmd === "OFF") && typeof window.pauseBackgroundMusic === "function") {
+      window.pauseBackgroundMusic();
+    }
+  }
+
+  const reCallOpen = /\[\[CALL:OPEN\]\]/gi;
+  while ((m = reCallOpen.exec(text)) !== null) {
+    if (typeof window.scrollToSection === "function") window.scrollToSection("call");
+  }
+
+  const reCallPin = /\[\[CALL:PIN:([0-9]{4,6})\]\]/gi;
+  while ((m = reCallPin.exec(text)) !== null) {
+    const p = anamSetCallPin(m[1]);
+    if (p && typeof window.scrollToSection === "function") window.scrollToSection("call");
+  }
+
+  const reCallHost = /\[\[CALL:HOST:([0-9]{4,6})\]\]/gi;
+  while ((m = reCallHost.exec(text)) !== null) {
+    const p = anamSetCallPin(m[1]);
+    if (!p) continue;
+    if (typeof window.scrollToSection === "function") window.scrollToSection("call");
+    setTimeout(() => document.getElementById("callCreate")?.click(), 250);
+  }
+
+  const reCallJoin = /\[\[CALL:JOIN:([0-9]{4,6})\]\]/gi;
+  while ((m = reCallJoin.exec(text)) !== null) {
+    const p = anamSetCallPin(m[1]);
+    if (!p) continue;
+    if (typeof window.scrollToSection === "function") window.scrollToSection("call");
+    setTimeout(() => document.getElementById("callJoin")?.click(), 250);
+  }
+
+  const reLang = /\[\[LANGUAGE:([a-z-]{2,8})\]\]/gi;
+  while ((m = reLang.exec(text)) !== null) {
+    const code = String(m[1] || "").toLowerCase();
+    const normalized = code.split("-")[0];
+    if (window.SITE_I18N && window.SITE_I18N[normalized]) {
+      setSiteLocale(normalized);
+      applySiteLanguage();
+    }
+  }
+
+  const reResume = /\[\[OPEN_RESUME\]\]/gi;
+  while ((m = reResume.exec(text)) !== null) {
+    anamOpenResume();
+  }
+
+  const reOpenChat = /\[\[(?:OPEN_CHATBOT|CHATBOT:OPEN)\]\]/gi;
+  while ((m = reOpenChat.exec(text)) !== null) {
+    if (typeof window.toggleChatbot === "function") window.toggleChatbot();
+  }
+
+  const reRefreshNews = /\[\[REFRESH_NEWS\]\]/gi;
+  while ((m = reRefreshNews.exec(text)) !== null) {
+    if (typeof window.refreshLatestNews === "function") void window.refreshLatestNews();
+  }
+
+  const reMapSearch = /\[\[MAP_SEARCH:([^\]]{1,140})\]\]/gi;
+  while ((m = reMapSearch.exec(text)) !== null) {
+    const q = String(m[1] || "").trim();
+    const input = document.getElementById("locationInput");
+    if (input && q) {
+      input.value = q;
+      if (typeof geocodeAddress === "function") geocodeAddress(q);
+    }
+  }
+}
+
 function handleAnamMessageReceivedForExternalLinks(e) {
   if (!CONFIG.anamOpenGoogleFromMessages) return;
   const d = e.detail;
@@ -479,7 +597,7 @@ function handleAnamMessageReceivedForExternalLinks(e) {
   const r = String(d.role || "").toLowerCase();
   if (r === "user") return;
 
-  const hasTag = /\[\[(?:GOOGLE_|OPEN_URL|YOUTUBE_)/i.test(text);
+  const hasTag = /\[\[(?:GOOGLE_|OPEN_URL|YOUTUBE_|SCROLL_TO:|THEME:|MUSIC:|CALL:|LANGUAGE:|OPEN_RESUME|OPEN_CHATBOT|CHATBOT:OPEN|REFRESH_NEWS|MAP_SEARCH:)/i.test(text);
   if (!hasTag) return;
 
   const assistantOk =
@@ -491,6 +609,7 @@ function handleAnamMessageReceivedForExternalLinks(e) {
   if (!assistantOk) return;
 
   anamProcessAssistantTextForExternalLinks(text);
+  anamProcessAssistantTextForSiteCommands(text);
 }
 
 /**
@@ -507,6 +626,8 @@ function ensureAnamExternalSearchDocumentListener() {
  * In Anam Lab → system prompt, teach tags, e.g.:
  * [[GOOGLE_SEARCH:q]] [[GOOGLE_SHOP:q]] [[GOOGLE_SITE:site.com|q]] [[OPEN_URL:https://...]]
  * [[YOUTUBE_SEARCH:q]] [[YOUTUBE_VIDEO:VIDEO_ID]]
+ * [[SCROLL_TO:projects]] [[THEME:blue]] [[MUSIC:PLAY]] [[CALL:HOST:1234]]
+ * [[LANGUAGE:zh]] [[OPEN_RESUME]] [[OPEN_CHATBOT]] [[REFRESH_NEWS]] [[MAP_SEARCH:Tokyo]]
  */
 function attachAnamExternalSearchListener(_agentEl) {
   ensureAnamExternalSearchDocumentListener();
